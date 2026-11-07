@@ -1,0 +1,21 @@
+{
+  "id": "bg_unholy",
+  "kind": "background",
+  "prompt": "comic book illustration of wide view of a bleak open moor at dusk, flat misty ground of dead grey grass stretching far back to a high horizon with a low line of distant dead trees, a huge blood red moon in the violet sky, a huge twisted dead black tree trunk at the left edge and one at the right edge of the image with gnarled branches reaching in at the top, a few leaning gravestones and a stone cross far away on the left and right, the middle of the ground open, richly detailed dead grass, roots, stones and fallen leaves, ink hatching, empty scene, no characters, hand-drawn dark fantasy RPG illustration, detailed clean dark ink linework, gloomy gothic color palette, deep purples and cold greys with red accents, a huge blood red moon low in a dusky violet sky, eerie moonlight from the upper left, soft mist on the ground, crisp shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+  "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, daylight, blue sky, sunny, green leaves, snow, desert, pitch black, too dark",
+  "seed": 63,
+  "size": [
+    1024,
+    576
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

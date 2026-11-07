@@ -1,0 +1,21 @@
+{
+  "id": "bg_grassland",
+  "kind": "background",
+  "prompt": "comic book illustration of close-up view of a small sunny grassy clearing in an old forest, a few huge thick tree trunks at the edge of the clearing rising out of the top of the image, only the lowest branches and leaves visible at the top, dense dark forest behind them, short grass with a few flowers in the foreground, no small trees, no distant landscape, empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, muted earthy color palette, warm sunlight from the upper left, soft cast shadows under the trees, shaded foliage with highlights and shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+  "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, mountains, distant landscape, aerial view, panorama, rolling hills, fields, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, metallic reflections, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, flat colors, no shadows",
+  "seed": 241,
+  "size": [
+    1024,
+    576
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

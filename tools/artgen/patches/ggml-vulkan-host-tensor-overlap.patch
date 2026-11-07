@@ -1,0 +1,23 @@
+diff --git i/src/ggml-vulkan/ggml-vulkan.cpp w/src/ggml-vulkan/ggml-vulkan.cpp
+index 8380e7db..64d23c53 100644
+--- i/src/ggml-vulkan/ggml-vulkan.cpp
++++ w/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -12513,11 +12513,18 @@ bool ggml_vk_build_graph(ggml_backend_vk_context * ctx, ggml_cgraph * cgraph, in
+             if (unsynced_nodes.size() == 0) {
+                 return false;
+             }
++            // Tensors outside Vulkan buffers (e.g. inputs in host memory) can't overlap device memory.
++            if (!node->buffer || !ggml_backend_buffer_is_vk(node->buffer)) {
++                return false;
++            }
+             auto n_base = vk_tensor_offset(node) + node->view_offs;
+             auto n_size = ggml_nbytes(node);
+             ggml_backend_vk_buffer_context * a_buf_ctx = (ggml_backend_vk_buffer_context *)node->buffer->context;
+             vk_buffer a_buf = a_buf_ctx->dev_buffer;
+             for (auto &other : unsynced_nodes) {
++                if (!other->buffer || !ggml_backend_buffer_is_vk(other->buffer)) {
++                    continue;
++                }
+                 ggml_backend_vk_buffer_context * o_buf_ctx = (ggml_backend_vk_buffer_context *)other->buffer->context;
+                 vk_buffer o_buf = o_buf_ctx->dev_buffer;
+                 if (a_buf == o_buf) {

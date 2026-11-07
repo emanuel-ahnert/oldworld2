@@ -1,0 +1,21 @@
+{
+  "id": "tex_plaster",
+  "kind": "texture",
+  "prompt": "flat front-on view of a weathered surface: old cream whitewashed plaster wall, cracked and stained, patches of exposed stone, dirty lower parts, filling the whole image edge to edge, seen straight on, flat and even, a section about one meter across, hand-painted fantasy RPG texture, painterly brush strokes, gritty and worn, dirt and grime, muted earthy colors, matte, even lighting",
+  "negative": "photo, realistic, blurry, text, watermark, signature, frame, border, perspective, horizon, sky, objects, characters, windows, doors, vignette, neon, oversaturated, glossy, shiny, specular highlights, 3d render, cgi, plants, vines, moss covering everything, building, house, landscape",
+  "seed": 3,
+  "size": [
+    768,
+    768
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

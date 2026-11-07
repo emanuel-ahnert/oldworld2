@@ -1,0 +1,21 @@
+{
+  "id": "enemy_bandit",
+  "kind": "sprite",
+  "prompt": "comic book illustration of a hooded bandit rogue in green leather armor holding a dagger in each hand, ready to fight, front view, single character only, full body, standing alone, isolated on a plain solid white background, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, matte flat colors, muted earthy color palette, soft cel shading with fine ink hatching, comic book art",
+  "negative": "photo, realistic, blurry, text, watermark, signature, frame, border, multiple characters, character sheet, multiple views, turnaround, back and front, cropped, ground, floor, shadow, ground line, platform, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, metallic reflections, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist",
+  "seed": 152,
+  "size": [
+    640,
+    960
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

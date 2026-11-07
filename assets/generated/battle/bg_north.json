@@ -1,0 +1,21 @@
+{
+  "id": "bg_north",
+  "kind": "background",
+  "prompt": "comic book illustration of close-up view of a small snowy clearing in an old pine forest in winter, a few huge thick pine trunks at the edge of the clearing rising out of the top of the image, dense dark snowy pine forest behind them, the snowy ground is richly detailed: wind-carved drifts with soft blue shadows, footprints and animal tracks in the snow, tufts of dry yellow grass and small grey rocks capped with snow poking through, a fallen branch and scattered pine cones, cold pale blue sky, no distant landscape, empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, cold winter color palette, pure white snow with pale blue shadows, dark green pines, pale clear blue winter sky, low sunlight from the upper left, crisp cast shadows on the snow, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+  "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, night, dark sky, green grass, green ground, moss, summer, autumn leaves, mountains, distant landscape",
+  "seed": 42,
+  "size": [
+    1024,
+    576
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

@@ -1,0 +1,160 @@
+{
+ "output": "art/concept/.work",
+ "style": {
+  "sprite": {
+   "prefix": "high-angle view from above, looking down at an angle like a classic 2D RPG map, of",
+   "suffix": "for a 2D fantasy RPG map, the top is visible, single object only, isolated on a plain solid white background, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, muted earthy color palette, soft cel shading with fine ink hatching, warm sunlight from the upper left, comic book art",
+   "negative": "photo, realistic, blurry, text, watermark, signature, frame, border, multiple objects, sprite sheet, multiple views, cropped, ground, floor, cast shadow, platform, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, metallic reflections, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, grass at the base, ground patch, island, base, pedestal, soil",
+   "gen": [
+    768,
+    768
+   ]
+  }
+ },
+ "assets": [
+  {
+   "id": "concept_mage",
+   "prompt": "an old wizard in a long flowing violet robe with gold embroidered trim, a wide violet hooded mantle over his shoulders, a leather belt with pouches and scrolls, long grey hair and a long grey beard, holding a tall wooden staff topped with a glowing blue crystal, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_warlock",
+   "prompt": "a sinister warlock in a dark purple and black hooded robe, the hood pulled up and his face in shadow, a tattered black cape, bone and skull ornaments on his belt and shoulders, glowing purple runes on the robe, holding a dark twisted staff topped with a purple orb, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_rogue",
+   "prompt": "a rogue thief in a dark green hood and cowl with a cloth mask over his mouth, fitted dark brown leather armor with many straps and buckles, a short dark green cape, leather bracers, leather boots, a dagger in each hand, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_shaman",
+   "prompt": "a tribal shaman with a big fur mantle over his shoulders, a leather tunic with painted patterns, a bone and tooth necklace, feathers in his long brown hair, a long brown beard, fur boots, holding a wooden totem staff with feathers and a carved head, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_bandit",
+   "prompt": "a rough forest bandit in patched brown leather and a grimy hooded cowl with a cloth scarf over his nose, a studded leather jerkin, one rusty iron pauldron, a fur collar, belts with pouches and a knife, worn trousers, wrapped shins and boots, holding a woodcutter axe, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_nomad",
+   "prompt": "a desert nomad raider in layered sand-colored robes and a wound head wrap with a veil across his face, a red sash and leather harness with a curved scimitar, leather bracers, baggy trousers tucked into wrapped boots, bronze ornaments, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_berserker",
+   "prompt": "a wild northern berserker warrior, bare muscular chest crossed by leather straps, a huge shaggy bear pelt over his shoulders, a round iron helmet with a nose guard, a long braided red beard, a fur kilt over wool trousers wrapped with leather thongs, fur boots, iron arm rings, holding a bearded axe, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_troll",
+   "prompt": "a huge hunched ice troll, pale blue-grey skin, long heavy arms with big hands, a small head with a heavy brow, long tusks and a big nose, shaggy white hair down its back, chunks of ice on its shoulders, a ragged fur loincloth, bare feet, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_corsair",
+   "prompt": "a swashbuckling corsair pirate in a red head scarf and a long dark blue coat with brass buttons over a loose white shirt, a wide leather sash belt with a pistol tucked in, striped trousers, tall black boots, a gold earring, holding a cutlass, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_hoplite",
+   "prompt": "an ancient greek hoplite soldier in a bronze corinthian helmet with a tall red horsehair crest, a bronze muscle cuirass, a white pleated skirt of leather strips, bronze greaves, a red cloak, a big round bronze shield, holding a spear, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_vampire",
+   "prompt": "an aristocratic vampire lord, pale grey skin, slicked back black hair, red eyes, a tall stiff collared black cape lined in deep red, a dark red brocade waistcoat with silver buttons over a white ruffled shirt, a black long coat, black trousers and polished boots, silver rings, elegant and menacing, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  },
+  {
+   "id": "concept_cultist",
+   "prompt": "a sinister cultist in a long tattered dark crimson robe with a deep pointed hood shadowing the face, a black stole with occult symbols, a rope belt with a ritual dagger and skull charms, bare feet, holding a black candle, chains around the wrists, full body, standing, facing the viewer, front view",
+   "seed": 51,
+   "height": 512,
+   "gen": [
+    640,
+    896
+   ],
+   "control": "tools/artgen/poses/stand_down.png",
+   "negative": "ground, rocks"
+  }
+ ]
+}

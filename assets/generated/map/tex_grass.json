@@ -1,0 +1,21 @@
+{
+  "id": "tex_grass",
+  "kind": "texture",
+  "prompt": "close-up top-down view of bright sunny light green meadow grass, short and soft, a few small clover leaves, seen from directly above at close range, a patch about two meters across, plain and uniform, no paths, no trees, no fields, hand-painted 2D fantasy RPG ground texture, soft painterly brush strokes, muted natural earthy colors, matte, even lighting",
+  "negative": "photo, realistic, blurry, text, watermark, signature, frame, border, horizon, sky, perspective, objects, characters, vignette, stained glass, mosaic, psychedelic, neon, oversaturated, high contrast, thick outlines, glossy, shiny, specular highlights, 3d render, cgi, path, road, trail, river, border, frame, edges, aerial view, landscape, fields, farmland, trees, forest, map",
+  "seed": 11,
+  "size": [
+    768,
+    768
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

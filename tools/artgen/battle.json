@@ -1,0 +1,174 @@
+{
+  "output": "assets/generated/battle",
+  "style": {
+    "sprite": {
+      "prefix": "comic book illustration of",
+      "suffix": "single character only, full body, standing alone, isolated on a plain solid white background, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, matte flat colors, muted earthy color palette, soft cel shading with fine ink hatching, comic book art",
+      "negative": "photo, realistic, blurry, text, watermark, signature, frame, border, multiple characters, character sheet, multiple views, turnaround, back and front, cropped, ground, floor, shadow, ground line, platform, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, metallic reflections, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist",
+      "gen": [
+        768,
+        768
+      ]
+    },
+    "background": {
+      "prefix": "comic book illustration of",
+      "suffix": "empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, muted earthy color palette, warm sunlight from the upper left, soft cast shadows under the trees, shaded foliage with highlights and shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+      "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, mountains, distant landscape, aerial view, panorama, rolling hills, fields, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, metallic reflections, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, flat colors, no shadows",
+      "gen": [
+        1024,
+        576
+      ]
+    },
+    "desert_background": {
+      "prefix": "comic book illustration of",
+      "suffix": "empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, warm sandy color palette, clear bright blue sky, harsh midday sunlight from the upper left, crisp cast shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+      "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, flat colors, no shadows, night, dark sky, clouds, snow, green grass, forest",
+      "gen": [
+        1024,
+        576
+      ]
+    },
+    "north_background": {
+      "prefix": "comic book illustration of",
+      "suffix": "empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, cold winter color palette, pure white snow with pale blue shadows, dark green pines, pale clear blue winter sky, low sunlight from the upper left, crisp cast shadows on the snow, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+      "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, night, dark sky, green grass, green ground, moss, summer, autumn leaves, mountains, distant landscape",
+      "gen": [
+        1024,
+        576
+      ]
+    },
+    "med_background": {
+      "prefix": "comic book illustration of",
+      "suffix": "empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, warm sunny mediterranean color palette, golden light, clear deep blue sky, strong sunlight from the upper left, crisp cast shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+      "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, night, dark sky, snow, desert dunes, jungle",
+      "gen": [
+        1024,
+        576
+      ]
+    },
+    "unholy_background": {
+      "prefix": "comic book illustration of",
+      "suffix": "empty scene, no characters, hand-drawn dark fantasy RPG illustration, detailed clean dark ink linework, gloomy gothic color palette, deep purples and cold greys with red accents, a huge blood red moon low in a dusky violet sky, eerie moonlight from the upper left, soft mist on the ground, crisp shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+      "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, daylight, blue sky, sunny, green leaves, snow, desert, pitch black, too dark",
+      "gen": [
+        1024,
+        576
+      ]
+    }
+  },
+  "assets": [
+    {
+      "id": "enemy_wolf",
+      "prompt": "a fierce grey wolf, side view, snarling, facing right",
+      "seed": 182,
+      "height": 300,
+      "flip": false
+    },
+    {
+      "id": "enemy_bandit",
+      "prompt": "a hooded bandit rogue in green leather armor holding a dagger in each hand, ready to fight, front view",
+      "seed": 152,
+      "height": 340,
+      "gen": [
+        640,
+        960
+      ]
+    },
+    {
+      "id": "hero_warrior_back",
+      "prompt": "a knight warrior in steel plate armor with plate leg armor and a blue cape, seen from behind, back view, his body and head turned to the upper right toward an enemy so his helmet is seen in profile, in a combat stance, a red and white round shield held on his left arm in front of him, sword raised in his right hand",
+      "seed": 84,
+      "height": 360,
+      "gen": [
+        640,
+        960
+      ],
+      "flip": false,
+      "control": "tools/artgen/poses/battle_back.png",
+      "negative": "skirt, tabard, robe, dress, long coat, ground, rocks, facing the viewer, front view"
+    },
+    {
+      "id": "bg_grassland",
+      "kind": "background",
+      "prompt": "close-up view of a small sunny grassy clearing in an old forest, a few huge thick tree trunks at the edge of the clearing rising out of the top of the image, only the lowest branches and leaves visible at the top, dense dark forest behind them, short grass with a few flowers in the foreground, no small trees, no distant landscape",
+      "seed": 241,
+      "size": [
+        1280,
+        720
+      ],
+      "init": "tools/artgen/layouts/clearing.png",
+      "strength": 0.75,
+      "note": "after generating, run tools/artgen/fix/bg_grassland.py on the output (covers a red dot, makes the sky blue, turns the light ray into sunlight, paints forest over three bare far trunks; needs sd-cli like artgen)"
+    },
+    {
+      "id": "bg_desert",
+      "kind": "background",
+      "style": "desert_background",
+      "prompt": "close-up view of open sandy desert ground at the edge of an oasis, two tall date palms on the left, a huge weathered red sandstone rock rising on the right edge of the image, rolling golden dunes in the distance, footprints and ripples in the sand in the foreground",
+      "seed": 304,
+      "size": [
+        1280,
+        720
+      ],
+      "init": "tools/artgen/layouts/desert.png",
+      "strength": 0.85,
+      "note": "after generating, the horizon is moved up: tools/artgen/fix/horizon.py IN OUT --at 290"
+    },
+    {
+      "id": "bg_ancient_desert",
+      "kind": "background",
+      "style": "desert_background",
+      "prompt": "close-up view of open sandy ground among ancient egyptian ruins, two huge broken sandstone columns with carved hieroglyphs on the right edge of the image, fallen stone blocks at their base, a tall obelisk on the left edge, two great pyramids far away on the horizon, golden dunes, ripples in the sand in the foreground",
+      "seed": 302,
+      "size": [
+        1280,
+        720
+      ],
+      "init": "tools/artgen/layouts/ancient.png",
+      "strength": 0.75,
+      "note": "after generating, the horizon is moved up: tools/artgen/fix/horizon.py IN OUT --at 300"
+    },
+    {
+      "id": "bg_north",
+      "kind": "background",
+      "prompt": "close-up view of a small snowy clearing in an old pine forest in winter, a few huge thick pine trunks at the edge of the clearing rising out of the top of the image, dense dark snowy pine forest behind them, the snowy ground is richly detailed: wind-carved drifts with soft blue shadows, footprints and animal tracks in the snow, tufts of dry yellow grass and small grey rocks capped with snow poking through, a fallen branch and scattered pine cones, cold pale blue sky, no distant landscape",
+      "seed": 42,
+      "size": [
+        1280,
+        720
+      ],
+      "init": "tools/artgen/layouts/snow_clearing.png",
+      "strength": 0.78,
+      "style": "north_background",
+      "note": "the layout snow_clearing.png is made from clearing.png by tools/artgen/layouts/snow_clearing.sh (snowy ground with drift shadows, rocks, grass tufts and a branch drawn in)"
+    },
+    {
+      "id": "bg_mediterranean",
+      "kind": "background",
+      "style": "med_background",
+      "prompt": "close-up view of open sunny ground in an old olive grove by the sea, a gnarled old olive tree with silvery leaves on the left edge of the image, a tall broken white marble column and fallen stone blocks on the right edge, dry golden grass with small stones, poppies and lavender in the foreground, the deep blue sea on the horizon with a low green hill",
+      "seed": 13,
+      "size": [
+        1280,
+        720
+      ],
+      "init": "tools/artgen/layouts/olive_grove.png",
+      "strength": 0.8,
+      "note": "the layout olive_grove.png is drawn by tools/artgen/layouts/olive_grove.sh; after generating, the horizon is moved up: tools/artgen/fix/horizon.py IN OUT --at 265"
+    },
+    {
+      "id": "bg_unholy",
+      "kind": "background",
+      "style": "unholy_background",
+      "prompt": "wide view of a bleak open moor at dusk, flat misty ground of dead grey grass stretching far back to a high horizon with a low line of distant dead trees, a huge blood red moon in the violet sky, a huge twisted dead black tree trunk at the left edge and one at the right edge of the image with gnarled branches reaching in at the top, a few leaning gravestones and a stone cross far away on the left and right, the middle of the ground open, richly detailed dead grass, roots, stones and fallen leaves, ink hatching",
+      "seed": 63,
+      "size": [
+        1280,
+        720
+      ],
+      "init": "tools/artgen/layouts/dead_moor.png",
+      "strength": 0.74,
+      "note": "the layout dead_moor.png is drawn by tools/artgen/layouts/dead_moor.sh to the battle camera: the horizon at a quarter of the height; seed 63 is used as generated"
+    }
+  ]
+}

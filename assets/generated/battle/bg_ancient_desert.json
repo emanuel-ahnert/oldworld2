@@ -1,0 +1,21 @@
+{
+  "id": "bg_ancient_desert",
+  "kind": "background",
+  "prompt": "comic book illustration of close-up view of open sandy ground among ancient egyptian ruins, two huge broken sandstone columns with carved hieroglyphs on the right edge of the image, fallen stone blocks at their base, a tall obelisk on the left edge, two great pyramids far away on the horizon, golden dunes, ripples in the sand in the foreground, empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, warm sandy color palette, clear bright blue sky, harsh midday sunlight from the upper left, crisp cast shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+  "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, flat colors, no shadows, night, dark sky, clouds, snow, green grass, forest",
+  "seed": 302,
+  "size": [
+    1024,
+    576
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

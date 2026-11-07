@@ -1,0 +1,10 @@
+# Text files use LF line endings everywhere.
+* text=auto eol=lf
+
+# Assets are binary: no line ending conversion, no text diffs.
+*.png binary
+*.gif binary
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.ttf binary

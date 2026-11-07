@@ -1,0 +1,76 @@
+{
+  "output": "assets/generated/buildings",
+  "style": {
+    "texture": {
+      "prefix": "flat front-on view of a weathered surface:",
+      "suffix": "filling the whole image edge to edge, seen straight on, flat and even, a section about one meter across, hand-painted fantasy RPG texture, painterly brush strokes, gritty and worn, dirt and grime, muted earthy colors, matte, even lighting",
+      "negative": "photo, realistic, blurry, text, watermark, signature, frame, border, perspective, horizon, sky, objects, characters, windows, doors, vignette, neon, oversaturated, glossy, shiny, specular highlights, 3d render, cgi, plants, vines, moss covering everything, building, house, landscape",
+      "gen": [
+        768,
+        768
+      ]
+    }
+  },
+  "assets": [
+    {
+      "id": "tex_plaster",
+      "kind": "texture",
+      "prompt": "old cream whitewashed plaster wall, cracked and stained, patches of exposed stone, dirty lower parts",
+      "seed": 3,
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "tex_wood",
+      "kind": "texture",
+      "prompt": "weathered vertical wooden planks, dark grain, knots, worn and scratched",
+      "seed": 3,
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "tex_rooftiles",
+      "kind": "texture",
+      "prompt": "rows of overlapping old terracotta roof shingles, chipped, uneven, dirty and weathered",
+      "seed": 3,
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "tex_stone",
+      "kind": "texture",
+      "prompt": "grey stone block masonry wall, irregular cut stones with mortar, chipped and weathered",
+      "seed": 3,
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "tex_sandstone",
+      "kind": "texture",
+      "prompt": "pale sandstone block wall, large worn blocks, eroded edges, sand in the cracks",
+      "seed": 3,
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "id": "tex_adobe",
+      "kind": "texture",
+      "prompt": "rough tan clay plaster over mud bricks, blotchy and uneven, small cracks, pits and chips, a few bricks showing through",
+      "seed": 4,
+      "size": [
+        512,
+        512
+      ]
+    }
+  ]
+}

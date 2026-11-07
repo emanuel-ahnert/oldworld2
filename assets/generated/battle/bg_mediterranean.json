@@ -1,0 +1,21 @@
+{
+  "id": "bg_mediterranean",
+  "kind": "background",
+  "prompt": "comic book illustration of close-up view of open sunny ground in an old olive grove by the sea, a gnarled old olive tree with silvery leaves on the left edge of the image, a tall broken white marble column and fallen stone blocks on the right edge, dry golden grass with small stones, poppies and lavender in the foreground, the deep blue sea on the horizon with a low green hill, empty scene, no characters, hand-drawn fantasy RPG illustration, detailed clean dark ink linework, warm sunny mediterranean color palette, golden light, clear deep blue sky, strong sunlight from the upper left, crisp cast shadows, depth and atmosphere, cel shading with fine ink hatching, comic book art, fantasy RPG battle background",
+  "negative": "photo, realistic, blurry, text, watermark, signature, people, animals, characters, frame, border, glossy, shiny, plastic, airbrushed, smooth gradients, specular highlights, rim light, glow, bloom, lens flare, 3d render, cgi, vector art, minimalist, flat lighting, night, dark sky, snow, desert dunes, jungle",
+  "seed": 13,
+  "size": [
+    1024,
+    576
+  ],
+  "settings": {
+    "model": "sdxl_lightning_8step.safetensors",
+    "vae": "sdxl_vae.safetensors",
+    "steps": 8,
+    "cfg": 1.0,
+    "sampler": "euler",
+    "scheduler": "sgm_uniform",
+    "vae_tile": 256,
+    "vae_overlap": 0.25
+  }
+}

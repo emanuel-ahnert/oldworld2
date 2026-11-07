@@ -1,0 +1,12 @@
+animations/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb
+base/Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.lite.gltf
+base/Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.lite.gltf
+base/Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Long.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Peasant_Arms.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Peasant_Body.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Peasant_Feet.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Peasant_Legs.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Ranger_Arms.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Ranger_Body.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Ranger_Feet.lite.gltf
+outfits/Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Modular Parts/Female_Ranger_Legs.lite.gltf
