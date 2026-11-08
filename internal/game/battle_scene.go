@@ -72,6 +72,9 @@ type battleScene struct {
 }
 
 func newBattleScene(g *Game, npc *world.NPC) *battleScene {
+	if g.demo != nil {
+		demoSlotOpeners(g.char)
+	}
 	player := g.char.Combatant()
 	enemy := character.Enemy(npc.Spawn.Kind, npc.Spawn.Level)
 	s := &battleScene{
@@ -261,7 +264,10 @@ func (s *battleScene) updateMenu() {
 func (s *battleScene) demoChoice(opts []string) {
 	switch s.frame {
 	case 20:
-		s.plan = s.b.PlanPlayerMove(uint64(s.g.frame))
+		s.plan = demoOpener(s.b)
+		if s.plan == "" {
+			s.plan = s.b.PlanPlayerMove(uint64(s.g.frame))
+		}
 		if i := slices.Index(opts, s.plan); i >= 0 {
 			s.cursor = i
 		}
@@ -359,7 +365,7 @@ func (s *battleScene) drawEnemyInfo(dst *gfx.Image) {
 	}
 	s.g.font.Draw(dst, lv, x+5, y+4+LineHeight, ink)
 	bar(dst, x+5, y+15+LineHeight, w-10, s.shown.enemyHP/float64(e.Base.MaxHP), hpColor(s.shown.enemyHP/float64(e.Base.MaxHP)))
-	s.drawEffects(dst, e, x, y+26+LineHeight, w+40, false)
+	s.drawEffects(dst, s.effects(e), x, y+26+LineHeight, w+40, false)
 }
 
 func (s *battleScene) drawPlayerInfo(dst *gfx.Image, vw, field int) {
@@ -375,15 +381,28 @@ func (s *battleScene) drawPlayerInfo(dst *gfx.Image, vw, field int) {
 	bar(dst, x+5, y+15, w-10, hpFrac, hpColor(hpFrac))
 	bar(dst, x+5, y+21, w-10, s.shown.playerMP/float64(max(1, p.Base.MaxMP)), mpColor)
 	s.g.font.Draw(dst, nums, x+5, y+28, ink)
-	s.drawEffects(dst, p, x, y-2, w, true)
+	s.drawEffects(dst, s.effects(p), x, y-2, w, true)
+}
+
+// effects returns a combatant's buffs, debuffs and statuses as of the message being shown:
+// while a turn's messages play, the turn is already resolved, so its later effects mustn't
+// show yet. The opening message comes before anything has happened.
+func (s *battleScene) effects(c *battle.Combatant) []battle.Effect {
+	if s.phase != phasePlay || len(s.messages) == 0 {
+		return c.Effects()
+	}
+	if c == s.b.Player {
+		return s.messages[0].PlayerEffects
+	}
+	return s.messages[0].EnemyEffects
 }
 
 // drawEffects shows buffs (green) and debuffs and statuses (red) as small labels in rows
 // next to an info box. above stacks the rows upward from y instead of downward.
-func (s *battleScene) drawEffects(dst *gfx.Image, c *battle.Combatant, x, y, maxW int, above bool) {
+func (s *battleScene) drawEffects(dst *gfx.Image, effects []battle.Effect, x, y, maxW int, above bool) {
 	const chipH = LineHeight + 2
 	cx, row := x, 0
-	for _, e := range c.Effects() {
+	for _, e := range effects {
 		w := s.g.font.Width(e.Label) + 8
 		if cx > x && cx+w > x+maxW {
 			cx, row = x, row+1

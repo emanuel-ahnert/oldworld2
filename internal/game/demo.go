@@ -6,6 +6,8 @@ import (
 	"math/rand/v2"
 	"slices"
 
+	"oldworld2/internal/battle"
+	"oldworld2/internal/character"
 	"oldworld2/internal/procgen"
 	"oldworld2/internal/save"
 	"oldworld2/internal/world"
@@ -20,7 +22,8 @@ import (
 const (
 	demoSight        = 24          // tiles: how far away the bot goes for an enemy
 	demoSearch       = 64          // tiles: how far from the player a path may lead
-	demoSearchCap    = 12000       // tiles a path search looks at, at most
+	demoSearchCap    = 40000       // tiles (in each direction walked) a path search looks at, at most
+	demoTurnCost     = 8           // frames a turn counts extra in a path search
 	demoStuck        = 90          // frames without getting anywhere before it tries elsewhere
 	demoIgnore       = 20 * 60     // frames an enemy it couldn't reach is left alone
 	demoAvoid        = 5 * 60 * 60 // frames an enemy that beat it is left alone
@@ -46,29 +49,37 @@ type demoBot struct {
 	path    [][2]int
 	replan  int // frames until the path is planned again
 
-	last   [2]int         // where the player stood
-	still  int            // frames the player has stood there
-	camp   bool           // press the camp key this frame
-	noRest int            // frames left without trying to rest (no room for a fire)
-	hurt   bool           // HP or MP are low: it fights only enemies already after it
-	await  int            // frames it has waited for a chasing enemy to come
-	tries  int            // camp key presses without a fire lighting
-	flee   bool           // running from chasers while hurt
-	ready  bool           // HP and MP are high enough for the enemy group it would go for next
-	dead   map[[2]int]int // spots it found no way to, and until which frame it leaves them alone
+	last    [2]int         // where the player stood
+	still   int            // frames the player has stood there
+	camp    bool           // press the camp key this frame
+	noRest  int            // frames left without trying to rest (no room for a fire)
+	hurt    bool           // HP or MP are low: it fights only enemies already after it
+	await   int            // frames it has waited for a chasing enemy to come
+	tries   int            // camp key presses without a fire lighting
+	flee    bool           // running from chasers while hurt
+	ready   bool           // HP and MP are high enough for the enemy group it would go for next
+	dead    map[[2]int]int // spots it found no way to, and until which frame it leaves them alone
+	running bool           // it runs (see input)
 }
 
 // startDemo starts a demo run: a new, unsaved game with a random class, zone and world.
 func (g *Game) startDemo() {
 	d := g.demo
+	restart := d != nil
 	if d == nil {
 		d = &demoBot{g: g, store: g.opts.Store, rng: rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))}
 		g.demo = d
 	}
 	g.opts.Store = nil // nothing is saved while the demo runs
 	g.opts.Seed = d.rng.Int64N(1_000_000)
-	g.opts.Class = classes[d.rng.IntN(len(classes))]
-	g.opts.StartZone = procgen.Implemented[d.rng.IntN(len(procgen.Implemented))]
+	class, zone := g.opts.Class, g.opts.StartZone
+	for {
+		g.opts.Class = classes[d.rng.IntN(len(classes))]
+		g.opts.StartZone = procgen.Implemented[d.rng.IntN(len(procgen.Implemented))]
+		if !restart || g.opts.Class != class || g.opts.StartZone != zone { // a restart shows something new
+			break
+		}
+	}
 	g.opts.Level, g.opts.StartAt = 1, nil
 	*d = demoBot{g: g, store: d.store, rng: d.rng, ignore: map[uint64]int{}, dead: map[[2]int]int{}, heading: d.rng.Float64() * 2 * math.Pi}
 	g.startLoading(func() error { return g.begin(true) })
@@ -180,7 +191,17 @@ func (d *demoBot) input() world.Input {
 	if g.world.BlockedForPlayer(next[0], next[1]) && d.still > 20 {
 		d.replan = 0 // an enemy stands in the way
 	}
-	run := p.Stamina > world.StaminaMax*demoRunStamina && len(d.path) > 6 || d.flee && p.Stamina > 0
+	// Running starts on a long way with stamina to spare and then keeps on until stamina runs
+	// low or the goal is near, so the pace doesn't flip between walking and running.
+	switch {
+	case d.flee:
+		d.running = p.Stamina > 0
+	case d.running:
+		d.running = p.Stamina > world.StaminaMax*0.1 && len(d.path) > 2
+	default:
+		d.running = p.Stamina > world.StaminaMax*demoRunStamina && len(d.path) > 10
+	}
+	run := d.running
 	return world.Input{Dir: dirOf(dx, dy), HasDir: true, Run: run}
 }
 
@@ -423,7 +444,9 @@ func (d *demoBot) plan() {
 }
 
 // findPath finds the quickest path of tiles from one tile to another (A*), not counting the
-// start; roads cost less, as they are walked faster. With next, any tile beside the goal
+// start; roads cost less, as they are walked faster, and every turn costs a little extra, so
+// the path runs in long straight stretches instead of zigzagging (on a grid, a staircase is
+// as short as an L, but it looks twitchy to watch). With next, any tile beside the goal
 // will do. It returns nil if there's no path within demoSearch tiles of the start.
 func findPath(w *world.World, from, to [2]int, next bool) [][2]int {
 	arrived := func(t [2]int) bool {
@@ -435,42 +458,54 @@ func findPath(w *world.World, from, to [2]int, next bool) [][2]int {
 	if arrived(from) {
 		return [][2]int{}
 	}
+	dirs := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
 	h := func(t [2]int) int { return (abs(t[0]-to[0]) + abs(t[1]-to[1])) * world.RoadWalkFrames }
-	cost := map[[2]int]int{from: 0}
-	prev := map[[2]int][2]int{}
-	open := &tileHeap{{from, h(from)}}
+	start := pathState{from, -1}
+	cost := map[pathState]int{start: 0}
+	prev := map[pathState]pathState{}
+	open := &tileHeap{{start, h(from)}}
 	for open.Len() > 0 && len(cost) < demoSearchCap {
-		cur := heap.Pop(open).(tileCost).t
-		if arrived(cur) {
+		cur := heap.Pop(open).(tileCost).s
+		if arrived(cur.t) {
 			var path [][2]int
-			for t := cur; t != from; t = prev[t] {
-				path = append(path, t)
+			for s := cur; s != start; s = prev[s] {
+				path = append(path, s.t)
 			}
 			slices.Reverse(path)
 			return path
 		}
-		for _, dir := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-			n := [2]int{cur[0] + dir[0], cur[1] + dir[1]}
-			if abs(n[0]-from[0]) > demoSearch || abs(n[1]-from[1]) > demoSearch || w.Blocked(n[0], n[1]) {
+		for d, dir := range dirs {
+			n := pathState{[2]int{cur.t[0] + dir[0], cur.t[1] + dir[1]}, d}
+			if abs(n.t[0]-from[0]) > demoSearch || abs(n.t[1]-from[1]) > demoSearch || w.Blocked(n.t[0], n.t[1]) {
 				continue
 			}
 			step := world.WalkFrames
-			if w.Road(n[0], n[1]) {
+			if w.Road(n.t[0], n.t[1]) {
 				step = world.RoadWalkFrames
+			}
+			if cur.dir >= 0 && cur.dir != d {
+				step += demoTurnCost
 			}
 			c := cost[cur] + step
 			if old, seen := cost[n]; seen && old <= c {
 				continue
 			}
 			cost[n], prev[n] = c, cur
-			heap.Push(open, tileCost{n, c + h(n)})
+			heap.Push(open, tileCost{n, c + h(n.t)})
 		}
 	}
 	return nil
 }
 
+// pathState is a tile reached walking in a direction (an index into findPath's dirs, -1 at
+// the start), so turns can cost extra.
+type pathState struct {
+	t   [2]int
+	dir int
+}
+
 type tileCost struct {
-	t [2]int
+	s pathState
 	f int // cost so far plus the estimate to the goal
 }
 
@@ -504,4 +539,46 @@ func abs(v int) int {
 		return -v
 	}
 	return v
+}
+
+// demoOpeners are the key moves the demo bot opens a battle with when it knows them: the
+// warrior's Charge, the rogue's Cheap Shot, the paladin's Judgment Hammer (all stuns, so the
+// rest of the fight starts with a free round).
+var demoOpeners = []string{"charge", "cheap_shot", "judgment_hammer"}
+
+// demoOpener is the bot's first move of a battle, or "" to leave the move to the planner.
+func demoOpener(b *battle.Battle) string {
+	if b.Round > 0 {
+		return ""
+	}
+	for _, id := range demoOpeners {
+		if !slices.Contains(b.Player.Abilities, id) {
+			continue
+		}
+		if ok, _ := b.Usable(b.Player, id); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+// demoSlotOpeners puts the openers the bot knows into its ability slots: into a free slot, or
+// in place of a self-targeted status move (the rogue's Smoke Veil gives way to Cheap Shot),
+// else of the last slot.
+func demoSlotOpeners(ch *character.Character) {
+	for _, id := range demoOpeners {
+		if !ch.Slottable(id) || slices.Contains(ch.Active, id) || ch.Equip(id) {
+			continue
+		}
+		slot := len(ch.Active) - 1
+		for i, a := range ch.Active {
+			if ab := battle.Get(a); ab != nil && ab.Category == battle.StatusCat && ab.Delivery == battle.Self {
+				slot = i
+				break
+			}
+		}
+		if !slices.Contains(demoOpeners, ch.Active[slot]) {
+			ch.Replace(slot, id)
+		}
+	}
 }

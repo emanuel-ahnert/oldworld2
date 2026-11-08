@@ -54,6 +54,9 @@ const (
 	CheatDeath           // passive: once per battle, an attack that would defeat the user leaves it at 10% HP
 	WrathTotem           // passive: puts down a totem at the start of a battle, Magic +1 stage
 	HealingTotem         // passive: puts down a totem at the start of a battle that heals 1/16 max HP every round
+	PreyOnWeak           // passive: +10% crit chance for each level the user is above the target
+	PoisonResist         // passive: poison does 75% less damage
+	Thorns               // passive: melee attackers that hit the user take 1/16 of its max HP
 )
 
 // StatChange raises or lowers a stat of the user or the target.
@@ -166,9 +169,13 @@ func init() {
 			Text: "Passive: puts down a totem at the start of every battle that heals 1/16 HP per round"},
 		Ability{ID: "improved_sprint", Name: "Improved Sprint", Passive: true,
 			Text: "Passive, on the map: sprinting uses up endurance at only 20% of the normal rate"},
+		Ability{ID: "poison_resistance", Name: "Poison Resistance", Passive: true, Special: PoisonResist,
+			Text: "Passive: poison does 75% less damage to you"},
+		Ability{ID: "prey_on_the_weak", Name: "Prey on the Weak", Passive: true, Special: PreyOnWeak,
+			Text: "Passive: +10% critical hit chance for each level you are above the enemy"},
 		Ability{ID: "cheat_death", Name: "Cheat Death", Passive: true, Special: CheatDeath,
 			Text: "Passive: once per battle, an attack that would kill you leaves you at 10% HP"},
-		Ability{ID: "kidney_shot", Name: "Kidney Shot", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 20, Cost: 25,
+		Ability{ID: "cheap_shot", Name: "Cheap Shot", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 10, Cost: 25,
 			Uses: 1, Inflict: []Inflict{{Status: Stun, Duration: 2}}, Text: "Once per battle: stuns for 2 rounds"},
 		Ability{ID: "gut_slash", Name: "Gut Slash", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 75, Cost: 30,
 			Text: "A vicious, powerful slash"},
@@ -264,6 +271,8 @@ func init() {
 			Stats: []StatChange{{Stat: Speed, Stages: -1}}, Text: "Target's Speed down"},
 		Ability{ID: "moonbeam", Name: "Moonbeam", Element: Holy, Category: MagicalCat, Delivery: TargetedSpell, Power: 50, Cost: 25,
 			Text: "A beam of moonlight"},
+		Ability{ID: "thorns", Name: "Thorns", Passive: true, Special: Thorns,
+			Text: "Passive: melee attackers that hit you take damage, 1/16 of your max HP"},
 		Ability{ID: "bear_form", Name: "Bear Form", Category: StatusCat, Delivery: Self, Cost: 30, Uses: 1, Special: BearForm,
 			Text: "Once: Defense up, heal 25%; attacks become melee and hit Defense"},
 

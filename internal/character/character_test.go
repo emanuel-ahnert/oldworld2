@@ -196,7 +196,7 @@ func TestHeroesArePhysical(t *testing.T) {
 	}
 }
 
-// Rogues learn Improved Sprint at level 6 along with Kidney Shot; it makes sprinting use up
+// Rogues learn Improved Sprint at level 6 along with Cheap Shot; it makes sprinting use up
 // stamina at 20% of the normal rate.
 func TestRogueImprovedSprint(t *testing.T) {
 	c := New(Rogue)
@@ -211,7 +211,7 @@ func TestRogueImprovedSprint(t *testing.T) {
 			}
 		}
 	}
-	if !slices.Contains(learned, "kidney_shot") || !slices.Contains(learned, "improved_sprint") {
+	if !slices.Contains(learned, "cheap_shot") || !slices.Contains(learned, "improved_sprint") {
 		t.Fatalf("learned at level 6: %v", learned)
 	}
 	if c.StaminaUse() != 0.2 || slices.Contains(c.Active, "improved_sprint") {

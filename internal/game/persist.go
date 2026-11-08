@@ -74,7 +74,7 @@ func (g *Game) restore(st *save.State) {
 	c := st.Character
 	g.char = &character.Character{
 		Class: character.Class(c.Class), Level: c.Level, XP: c.XP,
-		HP: c.HP, MP: c.MP, Money: c.Money, Known: c.Known, Active: c.Active,
+		HP: c.HP, MP: c.MP, Money: c.Money, Known: renamedAbilities(c.Known), Active: renamedAbilities(c.Active),
 	}
 	p := st.Player
 	g.world.Prepare(p.X, p.Y)
@@ -82,6 +82,18 @@ func (g *Game) restore(st *save.State) {
 	g.player.Facing = world.Dir(p.Facing)
 	g.checkpoint = [2]int{p.CheckpointX, p.CheckpointY}
 	g.saved = persisted{p, c}
+}
+
+// abilityRenames maps ability IDs of older saves to their current ones.
+var abilityRenames = map[string]string{"kidney_shot": "cheap_shot"}
+
+func renamedAbilities(ids []string) []string {
+	for i, id := range ids {
+		if to, ok := abilityRenames[id]; ok {
+			ids[i] = to
+		}
+	}
+	return ids
 }
 
 func (g *Game) playerState() save.Player {

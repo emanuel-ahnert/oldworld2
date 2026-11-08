@@ -63,9 +63,11 @@ Starting and level-up abilities of every class (the level is when it's learned; 
 | Rogue | Jab | Start | 30 | 0 | Fallback attack |
 | Rogue | Knife Throw | 2 | 45 | 20 | Physical, ranged |
 | Rogue | Poisoned Blade | 3 | 20 | 20 | Nature, melee, Poison |
-| Rogue | Kidney Shot | 6 | 20 | 25 | Stuns for 2 rounds, once per battle |
-| Rogue | Improved Sprint | 6 | — | — | Passive, on the map: sprinting uses up stamina at only 20% of the normal rate (learned along with Kidney Shot) |
+| Rogue | Cheap Shot | 6 | 10 | 25 | Stuns for 2 rounds, once per battle |
+| Rogue | Improved Sprint | 6 | — | — | Passive, on the map: sprinting uses up stamina at only 20% of the normal rate (learned along with Cheap Shot) |
 | Rogue | Cheat Death | 8 | — | — | Passive: once per battle, an attack that would kill the rogue leaves it at 10% HP instead (damage over time can still kill; learned along with Gut Slash) |
+| Rogue | Prey on the Weak | 8 | — | — | Passive: +10% critical hit chance (on top of the base 6.25%) for each level the rogue is above the enemy, up to 100%; no penalty against higher-level enemies |
+| Rogue | Poison Resistance | 10 | — | — | Passive: poison does 75% less damage to the rogue (its damage per round, at least 1); other damage over time is unchanged |
 | Shaman | Magic Wrath Totem | 4 | — | — | Passive: at the start of every battle the shaman puts down a totem that raises Magic by 1 stage for the battle (learned along with Stone Shock) |
 | Shaman | Healing Stream Totem | 4 | — | — | Passive: at the start of every battle the shaman also puts down a totem that heals 1/16 of max HP at the end of every round. Both totems are announced in one message |
 | Rogue | Gut Slash | 8 | 75 | 30 | High power |
@@ -110,6 +112,7 @@ Starting and level-up abilities of every class (the level is when it's learned; 
 | Druid | Insect Swarm | 2 | 30 | 30 | Nature, area spell (early, against Smoke); Swarm: 1/16 max HP per round, 10 rounds; 30% chance: Attack −1 stage |
 | Druid | Grasping Roots | 3 | 30 | 20 | Nature; target's Speed −1 stage |
 | Druid | Moonbeam | 4 | 50 | 25 | Holy, targeted spell |
+| Druid | Thorns | 4 | — | — | Passive: a melee attack that hits the druid hurts the attacker for 1/16 of the druid's max HP (at least 1); ranged attacks and spells don't |
 | Druid | Bear Form | 6 | — | 30 | Once per battle, for the rest of it: Defense +2 stages and heal 25%; attacks become melee (Smoke and Silence can't stop them) and hit Defense with the Druid's Magic |
 
 - Every caster learns an area spell at level 2 (Frost Ring, Hellfire Rain, Holy Burst, Chain Lightning, Insect Swarm): area spells get through Smoke, so a bandit's Smoke Screen can't leave them with only Wait
@@ -150,7 +153,7 @@ Level-up abilities come automatically, trainer abilities cost money, tome abilit
 ### Rogue
 | Source | Abilities |
 |--------|-----------|
-| Level-up | **Knife Throw** at level 2 (Physical, ranged, uses the thrown weapon; the answer to anti-melee traits), Poisoned Blade at level 3 (Nature, melee, Poison), **Kidney Shot** at level 6 (Stun for 2 rounds, once per battle), Gut Slash at level 8 (high power) |
+| Level-up | **Knife Throw** at level 2 (Physical, ranged, uses the thrown weapon; the answer to anti-melee traits), Poisoned Blade at level 3 (Nature, melee, Poison), **Cheap Shot** at level 6 (Stun for 2 rounds, once per battle), Gut Slash at level 8 (high power) |
 | Trainer | **Blind** (always hits, disables the enemy for 3 turns, damage breaks it; combine with Wait to let enemy buffs run out), Shadow Strike (Dark, melee, crit up), Evade (dodge the next attack) |
 | Tome | Death Mark (next hit on the target deals double damage) |
 

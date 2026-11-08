@@ -1583,25 +1583,49 @@ def tooth_necklace(b, bones):
     b.ellipsoid(m + Vector((0, -0.01, 0)), (0.014, 0.006, 0.014), b.mat("Stone", (180, 40, 36)), bones, 10, 5)
 
 
-def open_coat(b, color, top=1.4, length=1.05, lining=None):
+def open_coat(b, color, top=1.4, length=1.05, lining=None, vent=False, hem=None):
     """A long coat from the shoulders, open in front, falling in folds to the calves, ragged at
     the hem; it follows the thighs a little, so walking doesn't push the legs through it. The
-    lining is a darker shade of the coat unless given."""
+    lining is a darker shade of the coat unless given.
+
+    With vent, the coat is split up the back from the hem to the waist and each half follows
+    its own leg, softly, so in a wide or crouching stance the tails part and swing with the legs
+    instead of the whole back tilting with the hips like a board; its folds are deeper and more,
+    so the shading breaks up its surface. hem (a material) adds a band along the hem."""
     rows = []
+    depth, flare, folds = (0.06, 0.13, 15) if vent else (0.028, 0.1, 11)
     for i in range(14):
         t = i / 13
-        rx, ry = 0.23 + 0.1 * t, 0.17 + 0.08 * t
+        rx, ry = 0.23 + flare * t, 0.17 + 0.08 * t
         row = []
         for j in range(27):
             u = j / 26
             a = math.pi * (-0.3 + 1.6 * u)  # round the back from the front left to the front right
-            fold = (0.003 + 0.028 * t) * math.sin(u * math.pi * 11 + 0.4 * t)
+            fold = (0.003 + depth * t) * math.sin(u * math.pi * folds + 0.4 * t)
             rag = 0.06 * t ** 4 * math.sin(u * math.pi * 19) ** 2
             row.append((math.cos(a) * (rx + fold), 0.01 + math.sin(a) * (ry + fold), top - length * t - rag))
         rows.append(row)
+    lining, coat = b.mat("CoatLining", lining or tuple(int(c * 0.6) for c in color)), b.mat("Coat", color)
     power, b.power = b.power, 3.0
-    b.sheet(rows, b.mat("CoatLining", lining or tuple(int(c * 0.6) for c in color)), b.mat("Coat", color),
-            ["spine_03", "spine_02", "spine_01", "pelvis", "clavicle_l", "clavicle_r", "thigh_l", "thigh_r"], 0.012)  # the grid is the inner face
+    upper = ["spine_03", "spine_02", "spine_01", "pelvis", "clavicle_l", "clavicle_r"]
+    if not vent:
+        b.sheet(rows, lining, coat, upper + ["thigh_l", "thigh_r"], 0.012)  # the grid is the inner face
+        b.power = power
+        return
+    waist = next(i for i, row in enumerate(rows) if row[0][2] < 1.0)  # the first row below the waist
+    b.sheet(rows[:waist + 1], lining, coat, upper, 0.012)
+    # The tails: firm at the waist, where they meet the top, softer below, so they bend in a
+    # curve; columns 0..13 go round one side to the back, 13..26 the other.
+    b.power = lambda q: 3.0 if q.z > 0.95 else 2.2
+    middle = len(rows[0]) // 2
+    for cols in (slice(0, middle + 1), slice(middle, None)):
+        tail = [row[cols] for row in rows[waist:]]
+        side = "l" if (sum(q[0] for q in tail[-1]) > 0) == (b.head("thigh_l").x > 0) else "r"
+        bones = ["pelvis", "spine_01", f"thigh_{side}"]
+        b.sheet(tail, lining, coat, bones, 0.012)
+        if hem:  # a band just above the ragged hem, on the outside
+            band = [[Vector(q) * 1.012 + Vector((0, 0, dz)) for q in tail[-2]] for dz in (0.05, -0.01)]
+            b.sheet(band, hem, hem, bones, 0.006)
     b.power = power
 
 
@@ -1669,7 +1693,8 @@ def shaman_mantle(name, fur=FUR, light=FUR_LIGHT, coat=COAT, feathers=True, claw
     b.sheet(rows, b.mat("Hide", HIDE_DARK), fur, ["spine_03", "spine_02", "spine_01", "clavicle_l", "clavicle_r"], 0.016)
     b.power = 6.0
     if coat:
-        open_coat(b, coat)  # under the fur
+        paint = b.textured("Paint", embroidery_png("Shaman", PAINT_RED, PAINT), 0.07)
+        open_coat(b, coat, length=0.95, vent=True, hem=paint)  # under the fur, to the knees
     b.ellipsoid((0, -0.12, 1.49), (0.034, 0.014, 0.02), bone, NECK + TORSO, 10, 5)  # the clasp: a bone toggle
     b.rod((-0.045, -0.125, 1.49), (0.045, -0.125, 1.49), 0.008, bone, NECK + TORSO, 6)
     if claws:  # the pelt's forepaws, hanging down the chest, claws pale

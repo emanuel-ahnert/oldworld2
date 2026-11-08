@@ -497,3 +497,89 @@ func TestTotemsShareOneMessageAndHealingStreamHeals(t *testing.T) {
 		t.Fatalf("HP after a round %d, want 60", shaman.HP)
 	}
 }
+
+// A turn is resolved before its messages are shown, so each message carries the effects as
+// they were when it happened: Flame Shock's Burn shows only from its own message on.
+func TestEventEffectsFollowTheMessages(t *testing.T) {
+	hasBurn := func(es []Effect) bool {
+		return slices.ContainsFunc(es, func(e Effect) bool { return e.Label == Burn.String() })
+	}
+	for seed := uint64(1); seed < 50; seed++ {
+		shaman := fighter("Shaman", []Element{Physical},
+			Stats{MaxHP: 105, MaxMP: 150, Attack: 11, Magic: 11, Defense: 11, Resistance: 10, Speed: 30}, "flame_shock")
+		w := wolf()
+		w.Base.MaxHP, w.HP = 500, 500
+		b := New(shaman, w, seed)
+		events := b.Turn("flame_shock", WaitID)
+		if !hasBurn(w.Effects()) {
+			continue // the burn didn't take this time
+		}
+		use := slices.IndexFunc(events, func(e Event) bool { return e.Cue == CueUse && e.User == shaman })
+		burn := slices.IndexFunc(events, func(e Event) bool { return e.Cue == CueStatus })
+		if use < 0 || burn <= use {
+			t.Fatalf("expected the use, then the burn message: %+v", events)
+		}
+		if hasBurn(events[use].EnemyEffects) {
+			t.Fatal("Burn shows with the message that Flame Shock is used")
+		}
+		if !hasBurn(events[burn].EnemyEffects) {
+			t.Fatal("Burn doesn't show with its own message")
+		}
+		return
+	}
+	t.Fatal("Flame Shock never burned")
+}
+
+func TestPreyOnTheWeak(t *testing.T) {
+	rogue := fighter("Rogue", []Element{Physical}, Stats{MaxHP: 90, Attack: 14, Defense: 9, Speed: 11}, "prey_on_the_weak")
+	stab := Get("bite") // no crit chance of its own
+	for _, c := range []struct {
+		rogue, enemy int
+		want         float64
+	}{{8, 8, baseCrit}, {8, 11, baseCrit}, {8, 7, baseCrit + 0.1}, {8, 3, baseCrit + 0.5}, {20, 1, 1}} {
+		rogue.Level = c.rogue
+		w := wolf()
+		w.Level = c.enemy
+		if got := critChance(rogue, w, stab); math.Abs(got-c.want) > 1e-9 {
+			t.Errorf("level %d against %d: crit chance %v, want %v", c.rogue, c.enemy, got, c.want)
+		}
+	}
+	if got := critChance(warrior(), wolf(), stab); got != baseCrit {
+		t.Errorf("without the passive: %v, want %v", got, baseCrit)
+	}
+}
+
+func TestPoisonResistance(t *testing.T) {
+	poisoned := func(abilities ...string) int {
+		r := fighter("Rogue", []Element{Physical}, Stats{MaxHP: 160, Attack: 14, Defense: 9, Speed: 11}, abilities...)
+		b := New(r, wolf(), 1)
+		r.status[Poison] = 3
+		b.Turn(WaitID, WaitID)
+		return 160 - r.HP
+	}
+	if got := poisoned(); got != 10 {
+		t.Fatalf("poison without the passive: %d damage, want 10 (1/16)", got)
+	}
+	if got := poisoned("poison_resistance"); got != 3 { // 10 × 25%, rounded
+		t.Fatalf("poison with Poison Resistance: %d damage, want 3", got)
+	}
+}
+
+func TestThornsHurtMeleeAttackers(t *testing.T) {
+	attacked := func(enemyMove string, abilities ...string) int {
+		d := fighter("Druid", []Element{Nature}, Stats{MaxHP: 160, Attack: 9, Defense: 10, Speed: 10}, abilities...)
+		w := fighter("Wolf", []Element{Physical}, Stats{MaxHP: 50, Attack: 8, Defense: 10, Speed: 12}, "bite", "sling_stone")
+		b := New(d, w, 1)
+		b.Turn(WaitID, enemyMove)
+		return 50 - w.HP
+	}
+	if got := attacked("bite"); got != 0 {
+		t.Fatalf("without Thorns the wolf took %d damage", got)
+	}
+	if got := attacked("bite", "thorns"); got != 10 { // 160 / 16
+		t.Fatalf("a melee bite against Thorns: the wolf took %d, want 10", got)
+	}
+	if got := attacked("sling_stone", "thorns"); got != 0 {
+		t.Fatalf("a ranged attack against Thorns: the attacker took %d, want 0", got)
+	}
+}

@@ -13,6 +13,9 @@ import (
 const (
 	damageScale     = 3.0
 	baseCrit        = 1.0 / 16
+	preyOnWeakCrit  = 0.1  // crit chance per level above the target, with Prey on the Weak
+	poisonResist    = 0.75 // how much less poison hurts with Poison Resistance
+	thornsShare     = 16   // Thorns hurts melee attackers for 1/16 of the defender's max HP
 	critMultiplier  = 1.5
 	affinityBonus   = 1.5
 	enrageChance    = 0.5
@@ -249,6 +252,9 @@ type Event struct {
 	Cue      Cue        // what happened, for sound
 	Ability  *Ability   // the ability used, for CueUse
 	User     *Combatant // who used it, for CueUse
+	// The buffs, debuffs and statuses of both sides when it happened: a turn is resolved
+	// before its messages are shown, so the battle screen shows these with the message.
+	PlayerEffects, EnemyEffects []Effect
 }
 
 // Cue says what an event shows, so the battle screen can play a matching sound.
@@ -435,6 +441,7 @@ func (b *Battle) emitEvent(ev Event, format string, args ...any) {
 	ev.Text = fmt.Sprintf(format, args...)
 	ev.PlayerHP, ev.PlayerMP = b.Player.HP, b.Player.MP
 	ev.EnemyHP, ev.EnemyMP = b.Enemy.HP, b.Enemy.MP
+	ev.PlayerEffects, ev.EnemyEffects = b.Player.Effects(), b.Enemy.Effects()
 	b.events = append(b.events, ev)
 }
 
@@ -483,7 +490,7 @@ func (b *Battle) act(user *Combatant, a *Ability) {
 	}
 	if a.Category != StatusCat {
 		b.hit(user, target, a)
-		if !target.Alive() {
+		if !target.Alive() || !user.Alive() {
 			return
 		}
 		if user.sealed > 0 && (a.Category == PhysicalCat || user.bear) {
@@ -648,17 +655,26 @@ func (b *Battle) Damage(user, target *Combatant, a *Ability, crit bool, roll flo
 	return max(1, int(base*m*roll))
 }
 
+// critChance is the chance of a critical hit: the ability's, or the base chance, plus 10% for
+// each level the user is above the target with Prey on the Weak (being below costs nothing).
+func critChance(user, target *Combatant, a *Ability) float64 {
+	chance := baseCrit
+	if a.CritRate > 0 {
+		chance = a.CritRate
+	}
+	if user.has(PreyOnWeak) && user.Level > target.Level {
+		chance += preyOnWeakCrit * float64(user.Level-target.Level)
+	}
+	return min(1, chance)
+}
+
 func (b *Battle) hit(user, target *Combatant, a *Ability) {
 	eff := Effectiveness(a.Element, target.Types)
 	if eff == 0 {
 		b.emitCue(CueNoEffect, "It had no effect on %s.", target.Object())
 		return
 	}
-	critRate := baseCrit
-	if a.CritRate > 0 {
-		critRate = a.CritRate
-	}
-	crit := b.rng.Float64() < critRate
+	crit := b.rng.Float64() < critChance(user, target, a)
 	dmg := b.absorb(target, b.Damage(user, target, a, crit, 0.85+0.15*b.rng.Float64()))
 	cheated := b.attackDamage(target, dmg)
 	cue := CueHit
@@ -697,6 +713,22 @@ func (b *Battle) hit(user, target *Combatant, a *Ability) {
 	if target.has(SecondWind) && (crit || b.rng.Float64() < secondWindOdds) {
 		target.regen = secondWindRegen // a new trigger starts over, it doesn't stack
 		b.emitCue(CueStatUp, "Second Wind! %s to regenerate.", target.Verb("start"))
+	}
+	if target.has(Thorns) && delivery(user, a) == Melee && dmg > 0 {
+		b.thorns(user, target)
+	}
+}
+
+// thorns hurts a melee attacker that hit a target with Thorns: 1/16 of the target's max HP.
+func (b *Battle) thorns(user, target *Combatant) {
+	dmg := max(1, target.Base.MaxHP/thornsShare)
+	cheated := b.attackDamage(user, dmg)
+	b.emitHit(user, CueHit, "Thorns prick %s for %d.", user.Object(), dmg)
+	if cheated {
+		b.cheatDeath(user)
+	}
+	if !user.Alive() {
+		b.emitCue(CueDefeat, "%s defeated!", user.Be())
 	}
 }
 
@@ -781,7 +813,11 @@ func (b *Battle) endOfRound() {
 				if k == Drain {
 					share = 8
 				}
-				dmg := min(max(1, c.Base.MaxHP/share), c.HP)
+				dmg := max(1, c.Base.MaxHP/share)
+				if k == Poison && c.has(PoisonResist) {
+					dmg = max(1, int(math.Round(float64(dmg)*(1-poisonResist))))
+				}
+				dmg = min(dmg, c.HP)
 				c.HP -= dmg
 				b.emitHit(c, CueHit, "%s hurt by %s for %d damage.", c.Be(), statusNoun(k), dmg)
 				if foe := b.foe(c); k == Drain && foe.Alive() && foe.HP < foe.Base.MaxHP {

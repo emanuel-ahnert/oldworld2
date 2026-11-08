@@ -147,9 +147,16 @@ func (g *Game) Update() error {
 func (g *Game) update() error {
 	g.frame++
 	updateHeld()
-	if g.demo != nil && g.loading == nil && g.opts.ShotPath == "" && keyPressed(rl.KeyEscape) {
-		g.endDemo()
-		return nil
+	if g.demo != nil && g.loading == nil && g.opts.ShotPath == "" {
+		switch {
+		case keyPressed(rl.KeyEscape):
+			g.endDemo()
+			return nil
+		case keyPressed(rl.KeyR): // start over with another class and zone
+			g.battle, g.camp, g.message = nil, nil, nil
+			g.startDemo()
+			return nil
+		}
 	}
 	if g.loading != nil {
 		f := g.loading
