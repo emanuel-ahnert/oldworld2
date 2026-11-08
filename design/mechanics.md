@@ -198,7 +198,7 @@ Every ability has a **delivery** tag that decides what it can get through:
 
 ## 9. Win / Lose, Checkpoints & Death
 - Win: enemy defeated → rewards screen (XP, money, loot)
-- Lose: main character's HP reaches 0 → respawn at the last checkpoint, fully healed, lose 10% of money (see [items.md](items.md#8-currency--economy))
+- Lose: main character's HP reaches 0 → respawn at the last checkpoint, fully healed, lose 10% of money (see [items.md](items.md#8-currency--economy)) and all XP gained toward the next level (the level itself is never lost)
 - **Checkpoints:** the inn in every settlement, plus shrines along the roads (see [world.md](world.md#27-roads))
   - Activated by facing the inn door or the shrine and pressing Space; also fully heals the main character
   - The last visited checkpoint is where the main character respawns after defeat
@@ -244,6 +244,6 @@ TierMod        = trash 1, elite 2, champion 3, boss 5   (see world.md enemy tier
 | 50 | 13 | 6 500 |
 | 100 | 15 | 15 000 |
 
-- Fighting enemies above your level speeds this up (up to 1.5× XP at +5 levels). Farming much weaker enemies is barely worth it (down to 0.1× XP at −9 levels or more)
+- Fighting enemies above your level speeds this up (up to 1.5× XP at +5 levels). Each level an enemy is below you gives 10% less XP: half at −5 levels, nothing at −10 levels or more
 - The kill counts assume same-level trash enemies (e.g. wolves). Elite humanoid NPCs give twice as much
 - Since zone difficulty rises with every zone outward, the player naturally runs into higher-level enemies as they push outward

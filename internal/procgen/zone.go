@@ -85,6 +85,32 @@ func inCrossing(seed int64, x, y int, vertical bool) bool {
 	return false
 }
 
+// Crossings returns the crossings from zone (zx, zy) into its neighbor (zx+dx, zy+dy), one
+// of the four next to it: for each, the last tile on this side, in the middle of the crossing.
+func Crossings(seed int64, zx, zy, dx, dy int) [][2]int {
+	x0, y0 := zx*ZoneSize-zoneOffset, zy*ZoneSize-zoneOffset
+	var out [][2]int
+	switch {
+	case dx < 0:
+		for _, c := range crossings(seed, 0, x0, zy) {
+			out = append(out, [2]int{x0, c})
+		}
+	case dx > 0:
+		for _, c := range crossings(seed, 0, x0+ZoneSize, zy) {
+			out = append(out, [2]int{x0 + ZoneSize - 1, c})
+		}
+	case dy < 0:
+		for _, c := range crossings(seed, 1, y0, zx) {
+			out = append(out, [2]int{c, y0})
+		}
+	case dy > 0:
+		for _, c := range crossings(seed, 1, y0+ZoneSize, zx) {
+			out = append(out, [2]int{c, y0 + ZoneSize - 1})
+		}
+	}
+	return out
+}
+
 // crossings returns the positions (along the edge) of the 1–3 crossings of an edge segment.
 func crossings(seed int64, axis uint64, edge, seg int) []int {
 	r := rand01(seed, saltCrossingCount+axis*7, edge, seg)

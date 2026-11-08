@@ -128,7 +128,7 @@ Uncommon and better items roll a random suffix that picks their bonus stats (in 
 ## 8. Currency & Economy
 - Three coin types, WoW style: **bronze**, **silver**, **gold**
 - 100 bronze = 1 silver, 100 silver = 1 gold (TODO: confirm ratio)
-- Stored internally as a single integer in bronze; shown as `12g 34s 56b`
+- Stored internally as a single integer in bronze; shown as `12 34 56`, each amount followed by a gold, silver or bronze coin icon
 - Sources: enemy drops, selling items, chests (quest rewards later)
 - Sinks: shops, healing?, ability trainers, equipment repair?
 - **Death penalty:** 10% of the player's money is lost on every death

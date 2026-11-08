@@ -166,3 +166,23 @@ func TestNearestZone(t *testing.T) {
 		}
 	}
 }
+
+// The crossings into a neighboring zone are open: a walker can step from the last tile on this
+// side into the next zone.
+func TestCrossingsAreOpen(t *testing.T) {
+	const seed = 1
+	for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+		cs := Crossings(seed, 0, 0, d[0], d[1])
+		if len(cs) == 0 {
+			t.Fatalf("no crossing toward %v", d)
+		}
+		for _, c := range cs {
+			if zx, zy := ZoneOf(c[0], c[1]); zx != 0 || zy != 0 {
+				t.Errorf("crossing %v toward %v is in zone %d,%d", c, d, zx, zy)
+			}
+			if zx, zy := ZoneOf(c[0]+d[0], c[1]+d[1]); zx != d[0] || zy != d[1] {
+				t.Errorf("the tile past crossing %v toward %v is in zone %d,%d", c, d, zx, zy)
+			}
+		}
+	}
+}

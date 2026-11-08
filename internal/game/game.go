@@ -195,10 +195,6 @@ func (g *Game) update() error {
 		return nil
 	}
 
-	if g.demo != nil && g.frame-g.demo.started > demoRunFrames {
-		g.startDemo() // start over with another class and zone
-		return nil
-	}
 	in := g.readInput()
 	if !in.HasDir && !g.player.Moving() && g.menuKeyPressed() {
 		g.menu = &mainMenu{g: g}

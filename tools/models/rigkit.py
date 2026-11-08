@@ -7,6 +7,7 @@ is world -Y (backward); creatures face -Y (glTF +Z).
 """
 
 import math
+import os
 from pathlib import Path
 
 import bpy
@@ -264,7 +265,8 @@ class Kit:
         print("wrote", out)
 
     def preview(self, out_dir, distance=3.0, target_z=0.4, textured=False):
-        """Renders the first, middle and last frame of every animation to PNG."""
+        """Renders the first, middle and last frame of every animation to PNG, or every Nth
+        frame with PREVIEW_STEP=N in the environment."""
         out_dir = Path(out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         scene = bpy.context.scene
@@ -285,7 +287,10 @@ class Kit:
             for other in tracks:
                 other.mute = other != track
             end = int(track.strips[0].frame_end)
-            for f in (1, end // 2, end):
+            frames = (1, end // 2, end)
+            if step := int(os.environ.get("PREVIEW_STEP", "0")):
+                frames = sorted(set(range(1, end + 1, step)) | {end})
+            for f in frames:
                 scene.frame_set(f)
                 scene.render.filepath = str(out_dir / f"{track.name}_{f:02d}.png")
                 bpy.ops.render.render(write_still=True)

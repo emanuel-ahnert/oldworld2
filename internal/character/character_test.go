@@ -50,11 +50,13 @@ func TestPassivesDontTakeActiveSlots(t *testing.T) {
 	}
 }
 
-func TestDefeatCostsTenPercent(t *testing.T) {
+func TestDefeatCostsMoneyAndLevelXP(t *testing.T) {
 	c := New(Warrior)
+	c.GainXP(XPToNext(1) + 15) // level 2 and 15 XP toward level 3
 	c.Money, c.HP = 1234, 1
-	if lost := c.Defeated(); lost != 123 || c.Money != 1111 {
-		t.Fatalf("lost %d, left %d; want 123 and 1111", lost, c.Money)
+	if money, xp := c.Defeated(); money != 123 || c.Money != 1111 || xp != 15 || c.XP != 0 || c.Level != 2 {
+		t.Fatalf("lost %d money and %d XP, left %d money, %d XP, level %d; want 123, 15, 1111, 0, 2",
+			money, xp, c.Money, c.XP, c.Level)
 	}
 	if c.HP != float64(c.Stats().MaxHP) {
 		t.Fatal("respawn should fully heal")
@@ -212,5 +214,14 @@ func TestRogueImprovedSprint(t *testing.T) {
 	}
 	if c.StaminaUse() != 0.2 || slices.Contains(c.Active, "improved_sprint") {
 		t.Fatalf("stamina use %v, active %v", c.StaminaUse(), c.Active)
+	}
+}
+
+func TestXPFallsOffForWeakEnemies(t *testing.T) {
+	for _, c := range []struct{ below, want int }{{0, 100}, {4, 60}, {5, 50}, {6, 40}, {9, 10}, {10, 0}, {14, 0}} {
+		// A level 10 enemy against a player that many levels above it; full XP is 100.
+		if got := EnemyXP(10, 10+c.below, "trash"); got != c.want {
+			t.Errorf("%d levels below: %d XP, want %d", c.below, got, c.want)
+		}
 	}
 }

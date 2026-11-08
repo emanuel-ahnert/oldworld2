@@ -283,15 +283,20 @@ func (s *battleScene) finish() {
 	ch.HP, ch.MP = float64(s.b.Player.HP), float64(s.b.Player.MP)
 	s.phase, s.frame = phaseResult, 0
 	if !s.b.Won() {
-		lost := ch.Defeated()
+		money, xp := ch.Defeated()
 		s.addResult("You were defeated...", "")
-		s.addResult(fmt.Sprintf("You lose %s and wake up at the checkpoint.", formatMoney(lost)), "")
+		s.addResult(fmt.Sprintf("You lose %s and %d XP.", formatMoney(money), xp), "")
+		s.addResult("You wake up at the checkpoint.", "")
 		return
 	}
 	xp := character.EnemyXP(s.npc.Spawn.Level, ch.Level, s.tier)
 	coins := s.g.rollLoot(s.npc)
 	ch.Money += coins
-	s.addResult(fmt.Sprintf("You gain %d XP.", xp), "")
+	if xp > 0 {
+		s.addResult(fmt.Sprintf("You gain %d XP.", xp), "")
+	} else {
+		s.addResult("You gain no XP: this enemy is far below your level.", "")
+	}
 	if coins > 0 {
 		s.addResult(fmt.Sprintf("You find %s.", formatMoney(coins)), sndCoins)
 	}
@@ -503,15 +508,16 @@ func hpColor(frac float64) color.Color {
 	}
 }
 
-// formatMoney shows bronze as "1g 2s 3b" (design/items.md, Currency).
+// formatMoney shows bronze as gold, silver and bronze amounts, each followed by its coin icon
+// (design/items.md, Currency).
 func formatMoney(bronze int) string {
 	g, s, b := bronze/10000, bronze/100%100, bronze%100
 	switch {
 	case g > 0:
-		return fmt.Sprintf("%dg %ds %db", g, s, b)
+		return fmt.Sprintf("%d%c %d%c %d%c", g, coinGold, s, coinSilver, b, coinBronze)
 	case s > 0:
-		return fmt.Sprintf("%ds %db", s, b)
+		return fmt.Sprintf("%d%c %d%c", s, coinSilver, b, coinBronze)
 	default:
-		return fmt.Sprintf("%db", b)
+		return fmt.Sprintf("%d%c", b, coinBronze)
 	}
 }

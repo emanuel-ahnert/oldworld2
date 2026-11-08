@@ -286,14 +286,16 @@ func XPToNext(level int) int {
 	return int(kills) * 10 * level
 }
 
-// EnemyXP is the XP for defeating an enemy.
+// EnemyXP is the XP for defeating an enemy: 10% more for each level the enemy is above the
+// player (up to 50% more), 10% less for each level below, so nothing from an enemy 10 or more
+// levels below.
 func EnemyXP(enemyLevel, playerLevel int, tier string) int {
 	tierMod := 1.0
 	if tier == "elite" {
 		tierMod = 2
 	}
-	levelMod := math.Min(1.5, math.Max(0.1, 1+0.1*float64(enemyLevel-playerLevel)))
-	return max(1, int(math.Round(10*float64(enemyLevel)*tierMod*levelMod)))
+	levelMod := math.Min(1.5, math.Max(0, 1+0.1*float64(enemyLevel-playerLevel)))
+	return int(math.Round(10 * float64(enemyLevel) * tierMod * levelMod))
 }
 
 // LevelUp describes one level gained.
@@ -322,13 +324,14 @@ func (c *Character) GainXP(xp int) []LevelUp {
 	return ups
 }
 
-// Defeated applies the death penalty: lose 10% of the money, respawn fully healed
-// (design/mechanics.md, Win / Lose).
-func (c *Character) Defeated() (lost int) {
-	lost = c.Money / 10
-	c.Money -= lost
+// Defeated applies the death penalty: lose 10% of the money and all XP gained toward the
+// next level (never a level), respawn fully healed (design/mechanics.md, Win / Lose).
+func (c *Character) Defeated() (money, xp int) {
+	money, xp = c.Money/10, c.XP
+	c.Money -= money
+	c.XP = 0
 	c.Heal()
-	return lost
+	return money, xp
 }
 
 // Enemy builds a battle combatant for a creature at a level. Enemy HP and stats grow like

@@ -18,24 +18,25 @@ import (
 // the demo. Nothing is saved.
 
 const (
-	demoRunFrames  = 10 * 60 * 60 // a run starts over with a new class and zone after 10 minutes
-	demoSight      = 24           // tiles: how far away the bot goes for an enemy
-	demoSearch     = 64           // tiles: how far from the player a path may lead
-	demoSearchCap  = 12000        // tiles a path search looks at, at most
-	demoStuck      = 90           // frames without getting anywhere before it tries elsewhere
-	demoIgnore     = 20 * 60      // frames an enemy it couldn't reach is left alone
-	demoAvoid      = 5 * 60 * 60  // frames an enemy that beat it is left alone
-	demoRestBelow  = 0.5          // rest when HP or MP fall below this share...
-	demoRestUntil  = 0.95         // ...until both are back above this
-	demoRunStamina = 0.4          // run only with this share of stamina left
-	demoAwait      = 4 * 60       // frames it waits for a chasing enemy before walking to it
+	demoSight        = 24          // tiles: how far away the bot goes for an enemy
+	demoSearch       = 64          // tiles: how far from the player a path may lead
+	demoSearchCap    = 12000       // tiles a path search looks at, at most
+	demoStuck        = 90          // frames without getting anywhere before it tries elsewhere
+	demoIgnore       = 20 * 60     // frames an enemy it couldn't reach is left alone
+	demoAvoid        = 5 * 60 * 60 // frames an enemy that beat it is left alone
+	demoRestHP       = 0.7         // rest when HP fall below this share...
+	demoRestMP       = 0.5         // ...or MP below this one...
+	demoRestUntil    = 0.95        // ...until both are back above this
+	demoRunStamina   = 0.4         // run only with this share of stamina left
+	demoAwait        = 4 * 60      // frames it waits for a chasing enemy before walking to it
+	demoGroup        = 6           // tiles: enemies this close together count as one group
+	demoPastCrossing = 6           // tiles into the next zone a trip there ends
 )
 
 type demoBot struct {
-	g       *Game
-	rng     *rand.Rand
-	store   *save.Store // the save, put aside while the demo runs
-	started int         // g.frame when this run started
+	g     *Game
+	rng   *rand.Rand
+	store *save.Store // the save, put aside while the demo runs
 
 	goal    [2]int
 	hasGoal bool
@@ -45,12 +46,16 @@ type demoBot struct {
 	path    [][2]int
 	replan  int // frames until the path is planned again
 
-	last   [2]int // where the player stood
-	still  int    // frames the player has stood there
-	camp   bool   // press the camp key this frame
-	noRest int    // frames left without trying to rest (no room for a fire)
-	hurt   bool   // HP or MP are low: it fights only enemies already after it
-	await  int    // frames it has waited for a chasing enemy to come
+	last   [2]int         // where the player stood
+	still  int            // frames the player has stood there
+	camp   bool           // press the camp key this frame
+	noRest int            // frames left without trying to rest (no room for a fire)
+	hurt   bool           // HP or MP are low: it fights only enemies already after it
+	await  int            // frames it has waited for a chasing enemy to come
+	tries  int            // camp key presses without a fire lighting
+	flee   bool           // running from chasers while hurt
+	ready  bool           // HP and MP are high enough for the enemy group it would go for next
+	dead   map[[2]int]int // spots it found no way to, and until which frame it leaves them alone
 }
 
 // startDemo starts a demo run: a new, unsaved game with a random class, zone and world.
@@ -65,7 +70,7 @@ func (g *Game) startDemo() {
 	g.opts.Class = classes[d.rng.IntN(len(classes))]
 	g.opts.StartZone = procgen.Implemented[d.rng.IntN(len(procgen.Implemented))]
 	g.opts.Level, g.opts.StartAt = 1, nil
-	*d = demoBot{g: g, store: d.store, rng: d.rng, started: g.frame, ignore: map[uint64]int{}, heading: d.rng.Float64() * 2 * math.Pi}
+	*d = demoBot{g: g, store: d.store, rng: d.rng, ignore: map[uint64]int{}, dead: map[[2]int]int{}, heading: d.rng.Float64() * 2 * math.Pi}
 	g.startLoading(func() error { return g.begin(true) })
 }
 
@@ -104,22 +109,39 @@ func (d *demoBot) input() world.Input {
 	d.ticks()
 
 	// Rest at a camp fire when hurt, unless an enemy is already on the way.
-	d.hurt = hp < demoRestBelow || mp < demoRestBelow
+	d.hurt = hp < demoRestHP || mp < demoRestMP
 	if g.camp != nil {
+		d.tries = 0
 		if hp < demoRestUntil || mp < demoRestUntil {
 			return world.Input{}
 		}
-	} else if d.hurt && d.noRest == 0 && !d.threatened() {
+	} else if (d.hurt || !d.ready) && d.noRest == 0 && d.chaser() == nil {
+		// Stop (a step under way finishes first), then light the fire.
 		if !p.Moving() {
 			d.camp = true
-			if d.still > 30 { // the fire didn't light: no room here
-				d.noRest = 300
+			if d.tries++; d.tries > 5 { // the fire doesn't light: no room here
+				d.noRest, d.tries = 300, 0
 			}
-			return world.Input{}
 		}
+		return world.Input{}
 	}
 
-	d.chooseGoal()
+	// Hurt and chased, or chased by an enemy it can't beat: run instead of waiting for it. A
+	// chase gives up after a while (5 to 15 seconds), and then it can rest; a fast enemy may
+	// still catch it.
+	if c := d.threat(); c != nil && g.camp == nil {
+		if !d.flee || !d.hasGoal {
+			d.target, d.hasGoal = nil, false
+			d.heading = math.Atan2(float64(p.TY-c.TY), float64(p.TX-c.TX))
+			d.explore()
+			d.flee = d.hasGoal
+		}
+	} else if d.flee {
+		d.flee, d.hasGoal, d.path = false, false, nil
+	}
+	if !d.flee {
+		d.chooseGoal()
+	}
 	if !d.hasGoal {
 		return world.Input{}
 	}
@@ -158,7 +180,7 @@ func (d *demoBot) input() world.Input {
 	if g.world.BlockedForPlayer(next[0], next[1]) && d.still > 20 {
 		d.replan = 0 // an enemy stands in the way
 	}
-	run := p.Stamina > world.StaminaMax*demoRunStamina && len(d.path) > 6
+	run := p.Stamina > world.StaminaMax*demoRunStamina && len(d.path) > 6 || d.flee && p.Stamina > 0
 	return world.Input{Dir: dirOf(dx, dy), HasDir: true, Run: run}
 }
 
@@ -172,7 +194,7 @@ func (d *demoBot) ticks() {
 		d.still++
 	}
 	d.replan--
-	if d.still > demoStuck && d.hasGoal {
+	if d.still > demoStuck && (d.hasGoal || d.still > 3*demoStuck) {
 		if d.target != nil {
 			d.ignore[d.target.Spawn.ID] = d.g.frame + demoIgnore
 		}
@@ -182,19 +204,36 @@ func (d *demoBot) ticks() {
 	}
 }
 
-// threatened reports whether an enemy is chasing the player.
-func (d *demoBot) threatened() bool {
+// threat returns the chaser to run from: the nearest one when hurt, otherwise one it can't
+// beat.
+func (d *demoBot) threat() *world.NPC {
+	if d.hurt {
+		return d.chaser()
+	}
 	p := d.g.player
 	for _, n := range d.g.world.NPCs() {
-		if n.Chasing() && abs(n.TX-p.TX)+abs(n.TY-p.TY) < 12 {
-			return true
+		if n.Chasing() && !d.beatable(n) && abs(n.TX-p.TX)+abs(n.TY-p.TY) < 12 {
+			return n
 		}
 	}
-	return false
+	return nil
 }
 
-// beatable reports whether the bot should pick a fight with an enemy: not one far above the
-// player's level, and elites only at its own level or below.
+// chaser returns the nearest enemy chasing the player, if one is close.
+func (d *demoBot) chaser() *world.NPC {
+	p := d.g.player
+	var near *world.NPC
+	best := 12
+	for _, n := range d.g.world.NPCs() {
+		if dist := abs(n.TX-p.TX) + abs(n.TY-p.TY); n.Chasing() && dist < best {
+			near, best = n, dist
+		}
+	}
+	return near
+}
+
+// beatable reports whether an enemy is one the bot can take on: not far above the player's
+// level, and elites only at its own level or below.
 func (d *demoBot) beatable(n *world.NPC) bool {
 	lv := d.g.char.Level
 	if n.Info().Tier == "elite" {
@@ -203,14 +242,28 @@ func (d *demoBot) beatable(n *world.NPC) bool {
 	return n.Spawn.Level <= lv+1
 }
 
+// worthwhile reports whether an enemy is worth going for: one it can beat that gives a fair
+// share of XP (not 5 or more levels below the player), so it moves on to harder zones instead
+// of farming weak enemies.
+func (d *demoBot) worthwhile(n *world.NPC) bool {
+	return d.beatable(n) && n.Spawn.Level > d.g.char.Level-5
+}
+
 // chooseGoal picks where to go: the nearest enemy it can beat, otherwise a spot to explore.
+// Enemies in a group come one after another, so before going for a group it wants more HP
+// and MP the bigger the group is, and rests first if it hasn't (ready).
 func (d *demoBot) chooseGoal() {
 	g, p := d.g, d.g.player
 	var best *world.NPC
 	bestDist := demoSight + 1
+	d.ready = true
 	for _, n := range g.world.NPCs() {
 		dist := abs(n.TX-p.TX) + abs(n.TY-p.TY)
-		if dist >= bestDist || g.frame < d.ignore[n.Spawn.ID] || (!n.Chasing() && (d.hurt || !d.beatable(n))) {
+		if dist >= bestDist || g.frame < d.ignore[n.Spawn.ID] || (!n.Chasing() && (d.hurt || !d.worthwhile(n))) {
+			continue
+		}
+		if !n.Chasing() && !d.readyFor(n) {
+			d.ready = false
 			continue
 		}
 		best, bestDist = n, dist
@@ -230,17 +283,49 @@ func (d *demoBot) chooseGoal() {
 	}
 }
 
+// reachable reports whether a spot isn't near one it recently found no way to.
+func (d *demoBot) reachable(x, y int) bool {
+	for spot, until := range d.dead {
+		if d.g.frame >= until {
+			delete(d.dead, spot)
+		} else if abs(spot[0]-x)+abs(spot[1]-y) <= 8 {
+			return false
+		}
+	}
+	return true
+}
+
+// readyFor reports whether HP and MP are high enough to take on an enemy and the others
+// standing with it: 70% HP and 50% MP for one alone, 15% more of each per extra enemy, up to
+// the level resting stops at.
+func (d *demoBot) readyFor(n *world.NPC) bool {
+	group := 0
+	for _, o := range d.g.world.NPCs() {
+		if abs(o.TX-n.TX)+abs(o.TY-n.TY) <= demoGroup {
+			group++
+		}
+	}
+	st := d.g.char.Stats()
+	extra := 0.15 * float64(group-1)
+	return d.g.char.HP/float64(st.MaxHP) >= min(demoRestUntil, demoRestHP+extra) &&
+		d.g.char.MP/float64(max(1, st.MaxMP)) >= min(demoRestUntil, demoRestMP+extra)
+}
+
 // explore picks a spot 20 to 40 tiles ahead, roughly in the current heading: open ground,
-// in a zone not too hard for the player's level, a road if there is one.
+// in a zone not too hard for the player's level, a road if there is one. Once the player's
+// level suits a harder zone next door, it travels there instead.
 func (d *demoBot) explore() {
 	g, p := d.g, d.g.player
 	maxDifficulty := 1 + (g.char.Level-1)/5 // enemy levels rise by 5 per difficulty step
+	if d.travel(maxDifficulty) {
+		return
+	}
 	bestScore := math.Inf(-1)
 	for range 24 {
 		a := d.heading + (d.rng.Float64()-0.5)*math.Pi*0.8
 		r := 20 + d.rng.Float64()*20
 		x, y := p.TX+int(math.Round(r*math.Cos(a))), p.TY+int(math.Round(r*math.Sin(a)))
-		if g.world.Blocked(x, y) {
+		if g.world.Blocked(x, y) || !d.reachable(x, y) {
 			continue
 		}
 		zx, zy := procgen.ZoneOf(x, y)
@@ -263,6 +348,61 @@ func (d *demoBot) explore() {
 	d.replan = 0
 }
 
+// travel heads for the next zone once the player's level allows a harder one than the zone
+// it is in: to the nearest crossing into a neighboring zone of a higher difficulty it can
+// take on, along the roads where it can (roads run from each crossing to the zone's
+// settlement). Far from the crossing it walks there in legs of 25 to 45 tiles, each leg
+// ending where it gets closest, a road counting as a few tiles closer. It reports false if
+// there's no zone to go to.
+func (d *demoBot) travel(maxDifficulty int) bool {
+	g, p := d.g, d.g.player
+	zx, zy := procgen.ZoneOf(p.TX, p.TY)
+	here := g.world.Difficulty(zx, zy)
+	var dest [2]int
+	bestDist := math.MaxInt
+	for _, dir := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+		if diff := g.world.Difficulty(zx+dir[0], zy+dir[1]); diff <= here || diff > maxDifficulty {
+			continue
+		}
+		for _, c := range procgen.Crossings(g.world.Seed, zx, zy, dir[0], dir[1]) {
+			past := [2]int{c[0] + dir[0]*demoPastCrossing, c[1] + dir[1]*demoPastCrossing}
+			if dist := abs(past[0]-p.TX) + abs(past[1]-p.TY); dist < bestDist {
+				dest, bestDist = past, dist
+			}
+		}
+	}
+	if bestDist == math.MaxInt {
+		return false
+	}
+	if bestDist <= demoSearch*3/4 && d.reachable(dest[0], dest[1]) {
+		d.goal, d.hasGoal = dest, true
+	} else {
+		toward := math.Atan2(float64(dest[1]-p.TY), float64(dest[0]-p.TX))
+		best := math.Inf(-1)
+		for range 48 {
+			a := toward + (d.rng.Float64()-0.5)*math.Pi
+			r := 25 + d.rng.Float64()*20
+			x, y := p.TX+int(math.Round(r*math.Cos(a))), p.TY+int(math.Round(r*math.Sin(a)))
+			if g.world.Blocked(x, y) || !d.reachable(x, y) {
+				continue
+			}
+			score := float64(bestDist - abs(dest[0]-x) - abs(dest[1]-y))
+			if g.world.Road(x, y) {
+				score += 8
+			}
+			if score > best {
+				best, d.goal, d.hasGoal = score, [2]int{x, y}, true
+			}
+		}
+		if !d.hasGoal {
+			return false
+		}
+	}
+	d.heading = math.Atan2(float64(d.goal[1]-p.TY), float64(d.goal[0]-p.TX))
+	d.replan = 0
+	return true
+}
+
 // plan finds a path to the goal (next to it, when the goal is an enemy).
 func (d *demoBot) plan() {
 	p := d.g.player
@@ -274,6 +414,8 @@ func (d *demoBot) plan() {
 	if d.path == nil { // no way there
 		if d.target != nil {
 			d.ignore[d.target.Spawn.ID] = d.g.frame + demoIgnore
+		} else {
+			d.dead[d.goal] = d.g.frame + demoIgnore
 		}
 		d.hasGoal, d.target = false, nil
 		d.heading = d.rng.Float64() * 2 * math.Pi

@@ -55,34 +55,34 @@ SOCKET = k.material("Socket", (35, 28, 25))
 GLOW = k.material("Glow", (140, 255, 210))
 
 # Body
-k.ellipsoid((0, 0, 0.98), (0.19, 0.13, 0.15), WRAP, "hips")
-k.ellipsoid((0, 0.01, 1.26), (0.22, 0.14, 0.3), WRAP, "spine")
+k.ellipsoid((0, 0, 0.98), (0.15, 0.11, 0.14), WRAP, "hips")
+k.ellipsoid((0, 0.01, 1.26), (0.17, 0.11, 0.3), WRAP, "spine")
 k.ellipsoid((0, -0.01, 1.62), (0.12, 0.13, 0.15), WRAP, "head")
-k.rod((0, 0, 1.45), (0, 0, 1.55), 0.06, WRAP, "head")  # neck
+k.rod((0, 0, 1.45), (0, 0, 1.55), 0.05, WRAP, "head")  # neck
 for s in (-1, 1):
     k.ellipsoid((s * 0.045, -0.11, 1.64), (0.035, 0.025, 0.025), SOCKET, "head", 10, 6)
     k.ellipsoid((s * 0.045, -0.125, 1.64), (0.016, 0.012, 0.014), GLOW, "head", 8, 5)
     # Arms reach forward; the loose end of a bandage hangs from each forearm.
-    shoulder, elbow, hand = (s * 0.25, 0, 1.45), (s * 0.27, -0.3, 1.42), (s * 0.25, -0.58, 1.4)
-    k.ellipsoid(shoulder, (0.07, 0.07, 0.07), WRAP, f"arm_{s}")
-    k.rod(shoulder, elbow, 0.055, WRAP, f"arm_{s}", 10)
-    k.ellipsoid(elbow, (0.05, 0.05, 0.05), WRAP, f"fore_{s}")
-    k.rod(elbow, hand, 0.045, WRAP, f"fore_{s}", 10, taper=0.85)
-    k.ellipsoid((s * 0.25, -0.63, 1.39), (0.045, 0.06, 0.03), WRAP, f"fore_{s}")
-    k.box((s * 0.25, -0.45, 1.3), (0.035, 0.008, 0.2), LOOSE, f"fore_{s}", rot=(10, 0, s * 8))
+    shoulder, elbow, hand = (s * 0.21, 0, 1.45), (s * 0.23, -0.3, 1.42), (s * 0.21, -0.58, 1.4)
+    k.ellipsoid(shoulder, (0.06, 0.06, 0.06), WRAP, f"arm_{s}")
+    k.rod(shoulder, elbow, 0.045, WRAP, f"arm_{s}", 10)
+    k.ellipsoid(elbow, (0.042, 0.042, 0.042), WRAP, f"fore_{s}")
+    k.rod(elbow, hand, 0.038, WRAP, f"fore_{s}", 10, taper=0.85)
+    k.ellipsoid((s * 0.21, -0.63, 1.39), (0.04, 0.055, 0.028), WRAP, f"fore_{s}")
+    k.box((s * 0.21, -0.45, 1.3), (0.035, 0.008, 0.2), LOOSE, f"fore_{s}", rot=(10, 0, s * 8))
     # Legs
-    hip, knee, ankle = (s * 0.1, 0, 0.92), (s * 0.11, -0.01, 0.5), (s * 0.11, 0.01, 0.09)
-    k.rod(hip, knee, 0.075, WRAP, f"thigh_{s}", 10, taper=0.85)
-    k.ellipsoid(knee, (0.06, 0.06, 0.06), WRAP, f"shin_{s}")
-    k.rod(knee, ankle, 0.06, WRAP, f"shin_{s}", 10, taper=0.8)
-    k.ellipsoid((s * 0.11, -0.04, 0.045), (0.06, 0.12, 0.045), WRAP, f"shin_{s}")
-k.box((0.08, -0.12, 0.8), (0.04, 0.008, 0.22), LOOSE, "hips", rot=(-6, 0, 10))  # loose end at the waist
+    hip, knee, ankle = (s * 0.085, 0, 0.92), (s * 0.095, -0.01, 0.5), (s * 0.095, 0.01, 0.09)
+    k.rod(hip, knee, 0.06, WRAP, f"thigh_{s}", 10, taper=0.85)
+    k.ellipsoid(knee, (0.05, 0.05, 0.05), WRAP, f"shin_{s}")
+    k.rod(knee, ankle, 0.05, WRAP, f"shin_{s}", 10, taper=0.8)
+    k.ellipsoid((s * 0.095, -0.04, 0.045), (0.055, 0.11, 0.042), WRAP, f"shin_{s}")
+k.box((0.07, -0.1, 0.8), (0.04, 0.008, 0.22), LOOSE, "hips", rot=(-6, 0, 10))  # loose end at the waist
 
 bones = [("root", (0, 0, 0), None), ("hips", (0, 0, 0.95), "root"), ("spine", (0, 0, 1.1), "hips"),
          ("head", (0, 0, 1.5), "spine")]
 for s in (-1, 1):
-    bones += [(f"arm_{s}", (s * 0.25, 0, 1.45), "spine"), (f"fore_{s}", (s * 0.27, -0.3, 1.42), f"arm_{s}"),
-              (f"thigh_{s}", (s * 0.1, 0, 0.92), "hips"), (f"shin_{s}", (s * 0.11, -0.01, 0.5), f"thigh_{s}")]
+    bones += [(f"arm_{s}", (s * 0.21, 0, 1.45), "spine"), (f"fore_{s}", (s * 0.23, -0.3, 1.42), f"arm_{s}"),
+              (f"thigh_{s}", (s * 0.085, 0, 0.92), "hips"), (f"shin_{s}", (s * 0.095, -0.01, 0.5), f"thigh_{s}")]
 k.bones(bones)
 k.bind("Mummy")
 key = k.key
@@ -130,23 +130,23 @@ def hit():
 
 
 def death():
-    key(10, "spine", rot=(-12, 0, 0))
-    key(10, "hips", loc=(0, -0.08, 0))
+    key(6, "spine", rot=(-12, 0, 0))
+    key(6, "hips", loc=(0, -0.08, 0))
     for s in (-1, 1):
-        key(10, f"thigh_{s}", rot=(-10, 0, 0))
-        key(10, f"shin_{s}", rot=(25, 0, 0))
-    key(26, "root", rot=(88, 0, 0), loc=(0, 0.13, 0))  # topples forward onto the ground
-    key(40, "root", rot=(90, 0, 0), loc=(0, 0.12, 0))
-    arms(26, 60, 20)
-    arms(40, 70, 30)
-    key(40, "spine")
+        key(6, f"thigh_{s}", rot=(-10, 0, 0))
+        key(6, f"shin_{s}", rot=(25, 0, 0))
+    key(17, "root", rot=(88, 0, 0), loc=(0, 0.13, 0))  # topples forward onto the ground
+    key(26, "root", rot=(90, 0, 0), loc=(0, 0.12, 0))
+    arms(17, 60, 20)
+    arms(26, 70, 30)
+    key(26, "spine")
 
 
 k.action("Idle", 61, idle)
 k.action("Walk", 33, walk)
 k.action("Attack", 24, attack)
 k.action("HitReact", 18, hit)
-k.action("Death", 40, death)
+k.action("Death", 26, death)
 k.export(out)
 if len(args) > 1:
     k.preview(args[1], distance=4.2, target_z=0.9, textured=True)
