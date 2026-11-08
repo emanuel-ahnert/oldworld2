@@ -15,6 +15,9 @@ type camp struct {
 }
 
 func (g *Game) campPressed() bool {
+	if g.demo != nil {
+		return g.demo.campPressed()
+	}
 	if g.opts.Script != nil {
 		return scriptCamp(g.opts.Script, g.frame)
 	}

@@ -1,7 +1,10 @@
 // Package world holds the generated chunks around the player and answers tile queries.
 package world
 
-import "oldworld2/internal/procgen"
+import (
+	"oldworld2/internal/procgen"
+	"oldworld2/internal/tiles"
+)
 
 // World caches generated chunks and the enemies living in them. Chunks are generated on
 // first access.
@@ -68,6 +71,13 @@ func (w *World) Blocked(tx, ty int) bool {
 	cx, cy := ChunkCoord(tx, ty)
 	c := w.Chunk(cx, cy)
 	return c.Blocked[procgen.Index(tx-cx*procgen.ChunkSize, ty-cy*procgen.ChunkSize)]
+}
+
+// Road reports whether a world tile is part of a road.
+func (w *World) Road(tx, ty int) bool {
+	cx, cy := ChunkCoord(tx, ty)
+	c := w.Chunk(cx, cy)
+	return tiles.IsRoad(c.Ground[procgen.Index(tx-cx*procgen.ChunkSize, ty-cy*procgen.ChunkSize)])
 }
 
 // terrainKeepRadius is how many chunks of terrain are kept around the player.

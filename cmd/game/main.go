@@ -30,6 +30,7 @@ func main() {
 	at := flag.String("at", "", "start a new game at tile X,Y instead of the start point (for testing)")
 	zone := flag.String("zone", "grassland", "start a new game in the nearest zone of this type: "+zoneNames())
 	title := flag.Bool("title", false, "show the title screen even in test runs")
+	demo := flag.Bool("demo", false, "start in demo mode: the game plays itself with a random class and zone")
 	savePath := flag.String("save", "", "save file (default: ~/.local/share/oldworld2/save.db; test runs don't save unless set)")
 	assetsDir := flag.String("assets", "", "assets directory (default: ./assets)")
 	shot := flag.String("shot", "", "save a screenshot to this PNG file and quit")
@@ -38,7 +39,7 @@ func main() {
 	mute := flag.Bool("mute", false, "no music or sound (test runs are always silent)")
 	flag.Parse()
 
-	if err := run(*seed, *class, *level, *at, *zone, *newGame, *title, *mute, *savePath, *assetsDir, *shot, *shotFrame, *script); err != nil {
+	if err := run(*seed, *class, *level, *at, *zone, *newGame, *title, *demo, *mute, *savePath, *assetsDir, *shot, *shotFrame, *script); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		showFatal(err)
 		os.Exit(1)
@@ -54,7 +55,7 @@ func zoneNames() string {
 	return strings.Join(names, ", ")
 }
 
-func run(seed int64, className string, level int, at, zoneName string, newGame, forceTitle, mute bool, savePath, assetsFlag, shot string, shotFrame int, script string) error {
+func run(seed int64, className string, level int, at, zoneName string, newGame, forceTitle, demo, mute bool, savePath, assetsFlag, shot string, shotFrame int, script string) error {
 	var startAt *[2]int
 	if at != "" {
 		var x, y int
@@ -116,7 +117,7 @@ func run(seed int64, className string, level int, at, zoneName string, newGame, 
 	g, err := game.New(game.Options{
 		Seed: seed, Class: class, Level: level, StartAt: startAt, StartZone: zone, AssetsDir: dir, Store: store, NewGame: newGame,
 		// Without command line choices, the title screen lets the player continue or set up a new game.
-		Title: forceTitle || (!testRun && !newGame && startAt == nil), Script: steps, ShotPath: shot, ShotFrame: shotFrame,
+		Title: forceTitle || (!testRun && !newGame && !demo && startAt == nil), Demo: demo, Script: steps, ShotPath: shot, ShotFrame: shotFrame,
 		Sound: !testRun && !mute, // test runs must stay silent
 	})
 	if err != nil {

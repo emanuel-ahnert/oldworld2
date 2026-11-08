@@ -65,6 +65,7 @@ type battleScene struct {
 	shown    struct{ playerHP, playerMP, enemyHP float64 }
 	flash    map[*battle.Combatant]int
 
+	plan     string   // the demo bot's chosen move (demo.go)
 	result   []string // lines shown after the battle
 	resultSn []string // the sound of each result line ("" for none)
 	finished bool
@@ -164,7 +165,7 @@ func (s *battleScene) advance() bool {
 	if s.frame < 12 { // ignore presses that started the previous message
 		return false
 	}
-	if s.g.opts.Script != nil {
+	if s.g.automated() {
 		return s.frame >= autoAdvance
 	}
 	return s.g.confirmPressed()
@@ -202,6 +203,10 @@ func (s *battleScene) updateMenu() {
 	opts := s.options()
 	if s.cursor >= len(opts) || opts[s.cursor] == "" {
 		s.cursor = slices.IndexFunc(opts, func(id string) bool { return id != "" })
+	}
+	if s.g.demo != nil {
+		s.demoChoice(opts)
+		return
 	}
 	if s.g.opts.Script != nil {
 		if s.frame < 60 { // long enough to see the menu in test screenshots
@@ -247,6 +252,20 @@ func (s *battleScene) updateMenu() {
 		} else {
 			s.g.sound(sndCancel)
 		}
+	}
+}
+
+// demoChoice is the demo bot's turn: it plans its move, shows it with the cursor for a moment
+// so viewers can follow, then uses it.
+func (s *battleScene) demoChoice(opts []string) {
+	switch s.frame {
+	case 20:
+		s.plan = s.b.PlanPlayerMove(uint64(s.g.frame))
+		if i := slices.Index(opts, s.plan); i >= 0 {
+			s.cursor = i
+		}
+	case 55:
+		s.choose(s.plan)
 	}
 }
 
@@ -324,13 +343,17 @@ func (s *battleScene) draw(dst *gfx.Image) {
 
 func (s *battleScene) drawEnemyInfo(dst *gfx.Image) {
 	e := s.b.Enemy
-	x, y, w := 6, 6, 96
-	panel(dst, x, y, w, 24)
+	// The name on its own row, so long names fit; the level and the tier below it.
+	x, y, w := 6, 6, max(96, s.g.font.Width(e.Name)+10)
+	panel(dst, x, y, w, 24+LineHeight)
 	s.g.font.Draw(dst, e.Name, x+5, y+4, ink)
-	lv := fmt.Sprintf("Lv%d", e.Level)
-	s.g.font.Draw(dst, lv, x+w-5-s.g.font.Width(lv), y+4, ink)
-	bar(dst, x+5, y+15, w-10, s.shown.enemyHP/float64(e.Base.MaxHP), hpColor(s.shown.enemyHP/float64(e.Base.MaxHP)))
-	s.drawEffects(dst, e, x, y+26, w+40, false)
+	lv := fmt.Sprintf("lvl %d", e.Level)
+	if s.tier == "elite" {
+		lv += " elite"
+	}
+	s.g.font.Draw(dst, lv, x+5, y+4+LineHeight, ink)
+	bar(dst, x+5, y+15+LineHeight, w-10, s.shown.enemyHP/float64(e.Base.MaxHP), hpColor(s.shown.enemyHP/float64(e.Base.MaxHP)))
+	s.drawEffects(dst, e, x, y+26+LineHeight, w+40, false)
 }
 
 func (s *battleScene) drawPlayerInfo(dst *gfx.Image, vw, field int) {

@@ -38,8 +38,8 @@ Reference: Pokemon FireRed, where a walking step takes 16 frames (≈ 3.75 tiles
 
 | Mover | Time per tile | Speed (tiles/s) | Notes |
 |-------|--------------:|----------------:|-------|
-| Player walking | 12 frames | 5 | |
-| Player running | 6 frames | 10 | Hold Shift / Y. Stamina lasts ~10 s, refills in ~20 s (twice as fast standing still). Without stamina the player walks. Rogues from level 6 (Improved Sprint): stamina lasts ~50 s |
+| Player walking | 12 frames | 5 | On a road: 10 frames, 6 tiles/s |
+| Player running | 6 frames | 10 | On a road: 5 frames, 12 tiles/s. | Hold Shift / Y. Stamina lasts ~10 s, refills in ~20 s (twice as fast standing still). Without stamina the player walks. Rogues from level 6 (Improved Sprint): stamina lasts ~50 s |
 | Slow NPC | 18 frames | ≈ 3.3 | Can always be walked away from |
 | Normal NPC | 9 frames | ≈ 6.7 | Faster than walking, slower than running |
 | Fast NPC | 7 frames | ≈ 8.6 | Catches up once stamina runs out |

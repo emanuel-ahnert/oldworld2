@@ -71,9 +71,9 @@ func newTitle(g *Game) *titleScreen {
 
 func (t *titleScreen) mainItems() []string {
 	if t.hasSave {
-		return []string{"Continue", "New game", "Quit"}
+		return []string{"Continue", "New game", "Demo", "Quit"}
 	}
-	return []string{"New game", "Quit"}
+	return []string{"New game", "Demo", "Quit"}
 }
 
 func (t *titleScreen) update() {
@@ -92,6 +92,8 @@ func (t *titleScreen) update() {
 				g.startLoading(func() error { return g.begin(false) })
 			case "New game":
 				t.page, t.cursor = pageSetup, rowClass
+			case "Demo":
+				g.startDemo()
 			case "Quit":
 				g.done = true
 			}

@@ -170,7 +170,8 @@ This is the overview. Details live in separate files:
 - See [classes.md](classes.md#31-ability-loadout)
 
 ### 7.4 Title Screen and Main Menu
-- **Title screen** when the game starts: Continue (only if a save exists), New game, Quit
+- **Title screen** when the game starts: Continue (only if a save exists), New game, Demo, Quit
+- **Demo:** the game plays itself with a random class in a random zone, unsaved; Escape returns to the title. A bot walks by simple rules (rest at a camp fire when HP or MP fall below half, go for the nearest enemy it can beat, or wait for one that is already chasing it, otherwise explore, preferring roads and zones fit for its level) and picks battle moves by playing each one out on copies of the battle (`battle.PlanPlayerMove`, no trained model). After a defeat it carries on from the checkpoint like a player would; every 10 minutes a run starts over with another class and zone
 - **New game:** choose the class (left/right; shows the sprite, a one-line description, types and starting abilities), the start zone (Grassland, Desert, Ancient Desert or North: the game starts in front of the inn of the nearest zone of that type, and that zone is difficulty 1) and type a world seed, or leave it empty for a random world. If a save exists, starting asks for confirmation, because the new game replaces it. A short loading screen shows while the start zone is prepared
 - **Main menu in the game:** Escape (gamepad X) on the adventure map: Resume, Abilities, Controls (key reference), Save and return to title, Save and quit. B or Escape closes it
 

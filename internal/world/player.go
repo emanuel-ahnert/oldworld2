@@ -29,7 +29,10 @@ func (d Dir) Delta() (dx, dy int) {
 const (
 	WalkFrames = 12 // 5 tiles/s
 	RunFrames  = 6
-	TurnFrames = 6 // a tap shorter than this only turns the player in place
+	// Steps onto a road are 20% faster.
+	RoadWalkFrames = 10
+	RoadRunFrames  = 5
+	TurnFrames     = 6 // a tap shorter than this only turns the player in place
 
 	StaminaMax         = 10.0 // seconds of running
 	staminaRefillTime  = 20.0 // seconds to refill from empty while moving
@@ -51,6 +54,7 @@ type Player struct {
 	StaminaUse float64 // how fast running uses stamina: 1 normally (0 also means 1), less with a perk
 
 	moving     bool
+	running    bool
 	fromX      int
 	fromY      int
 	progress   int // frames into the current step
@@ -69,10 +73,14 @@ func NewPlayer(tx, ty int) *Player {
 func (p *Player) Moving() bool { return p.moving }
 
 // Running reports whether the current step is a running step.
-func (p *Player) Running() bool { return p.moving && p.stepFrames == RunFrames }
+func (p *Player) Running() bool { return p.moving && p.running }
 
-// Update advances the player by one frame.
-func (p *Player) Update(in Input, blocked func(tx, ty int) bool) {
+// StepFrames returns how many frames the current step takes.
+func (p *Player) StepFrames() int { return p.stepFrames }
+
+// Update advances the player by one frame. road reports road tiles, which are walked faster
+// (nil: no roads).
+func (p *Player) Update(in Input, blocked, road func(tx, ty int) bool) {
 	p.updateStamina(in)
 
 	if p.moving {
@@ -116,9 +124,17 @@ func (p *Player) Update(in Input, blocked func(tx, ty int) bool) {
 	p.TX, p.TY = p.TX+dx, p.TY+dy
 	p.moving = true
 	p.progress = 0
-	p.stepFrames = WalkFrames
-	if in.Run && p.Stamina > 0 {
+	p.running = in.Run && p.Stamina > 0
+	onRoad := road != nil && road(p.TX, p.TY)
+	switch {
+	case p.running && onRoad:
+		p.stepFrames = RoadRunFrames
+	case p.running:
 		p.stepFrames = RunFrames
+	case onRoad:
+		p.stepFrames = RoadWalkFrames
+	default:
+		p.stepFrames = WalkFrames
 	}
 	p.walked = false
 }

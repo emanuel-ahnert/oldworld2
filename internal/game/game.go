@@ -48,6 +48,7 @@ type Options struct {
 	NewGame   bool         // start a new game even if a save exists
 	Title     bool         // show the title screen first instead of starting right away
 	Sound     bool         // play music and sounds (off in test runs)
+	Demo      bool         // start in demo mode: the game plays itself (demo.go)
 }
 
 // ErrDone is returned by Update when the game should quit.
@@ -81,7 +82,8 @@ type Game struct {
 	battle     *battleScene
 	grace      int // frames left in which no enemy can engage
 	audio      *audio.Player
-	mapMusic   string // the map tune where the player is (sound.go)
+	mapMusic   string   // the map tune where the player is (sound.go)
+	demo       *demoBot // set in demo mode: a bot plays instead of the player
 }
 
 // New loads assets and places the player at the spawn point.
@@ -101,6 +103,10 @@ func New(opts Options) (*Game, error) {
 
 	if opts.Title {
 		g.title = newTitle(g)
+		return g, nil
+	}
+	if opts.Demo {
+		g.startDemo()
 		return g, nil
 	}
 	if err := g.begin(opts.NewGame); err != nil {
@@ -141,6 +147,10 @@ func (g *Game) Update() error {
 func (g *Game) update() error {
 	g.frame++
 	updateHeld()
+	if g.demo != nil && g.loading == nil && g.opts.ShotPath == "" && keyPressed(rl.KeyEscape) {
+		g.endDemo()
+		return nil
+	}
 	if g.loading != nil {
 		f := g.loading
 		g.loading = nil
@@ -165,7 +175,7 @@ func (g *Game) update() error {
 	}
 
 	if g.message != nil {
-		if g.confirmPressed() || (g.opts.Script != nil && g.frame%90 == 0) {
+		if g.confirmPressed() || (g.automated() && g.frame%90 == 0) {
 			g.message = nil
 		}
 		return nil
@@ -185,6 +195,10 @@ func (g *Game) update() error {
 		return nil
 	}
 
+	if g.demo != nil && g.frame-g.demo.started > demoRunFrames {
+		g.startDemo() // start over with another class and zone
+		return nil
+	}
 	in := g.readInput()
 	if !in.HasDir && !g.player.Moving() && g.menuKeyPressed() {
 		g.menu = &mainMenu{g: g}
@@ -206,7 +220,7 @@ func (g *Game) update() error {
 		g.startCamp()
 	}
 	g.player.StaminaUse = g.char.StaminaUse()
-	g.player.Update(in, g.world.BlockedForPlayer)
+	g.player.Update(in, g.world.BlockedForPlayer, g.world.Road)
 	if g.camp != nil {
 		g.char.RegenerateAtCamp()
 	} else {
@@ -278,6 +292,9 @@ func (g *Game) endBattle() {
 	// Defeat: back to the checkpoint (HP, MP and money were handled by the battle scene).
 	g.world.SendHome(s.npc)
 	g.player = world.NewPlayer(g.checkpoint[0], g.checkpoint[1])
+	if g.demo != nil {
+		g.demo.defeated(s.npc)
+	}
 }
 
 // rollLoot returns the money an enemy drops, in bronze. Trash drops little and not always;
@@ -324,7 +341,14 @@ func (g *Game) confirmPressed() bool {
 	return keyPressed(rl.KeySpace) || padPressed(rl.GamepadButtonRightFaceDown) // A
 }
 
+// automated reports whether something other than the player gives the input: a test script
+// or the demo bot.
+func (g *Game) automated() bool { return g.opts.Script != nil || g.demo != nil }
+
 func (g *Game) readInput() world.Input {
+	if g.demo != nil {
+		return g.demo.input()
+	}
 	if g.opts.Script != nil {
 		return scriptInput(g.opts.Script, g.frame)
 	}

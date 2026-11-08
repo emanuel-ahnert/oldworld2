@@ -42,10 +42,11 @@ Then, from the repository root:
     go run ./cmd/game
 
 This opens the title screen: continue the saved game, or set up a new one (class, start
-zone, world seed). Saves go to `~/.local/share/oldworld2/save.db`.
+zone, world seed), or watch a demo where the game plays itself with a random class and
+zone. Saves go to `~/.local/share/oldworld2/save.db`.
 
 Useful flags for testing: `-new` starts a new game right away, with `-class rogue`,
-`-zone north`, `-seed 42`, `-level 6` or `-at X,Y`; `-mute` turns the sound off. See
+`-zone north`, `-seed 42`, `-level 6` or `-at X,Y`; `-demo` starts the demo; `-mute` turns the sound off. See
 `go run ./cmd/game -h` for all of them.
 
 ## Controls
@@ -67,6 +68,7 @@ A gamepad works too: the D-pad moves, A is Space.
     go test ./...        # unit tests: world generation, battles, saving, movement…
     go vet ./...
     go run ./cmd/mapshot -seed 1 -out map.png           # the generated world as a map image
+    go run ./cmd/balance -level 10 -gap 2               # win rates of every class against every enemy
     tools/testrun.sh out.png 120 'right:20,run-down:40'  # scripted run, saves a screenshot
 
 `tools/testrun.sh` opens the game without stealing focus (on a hidden Hyprland workspace),
@@ -99,6 +101,7 @@ Almost all art is made by scripts in this repository:
 |------|----------|
 | `cmd/game` | The game |
 | `cmd/mapshot` | Renders part of the world to a PNG, without a window |
+| `cmd/balance` | Simulated battles of every class against every enemy, played by the demo's battle planner |
 | `internal/game` | Game states: title, map, battles, menus, HUD, the 3D scene, sound |
 | `internal/battle` | The battle rules: abilities, types, damage, status effects |
 | `internal/character` | Classes, levels and the hero |

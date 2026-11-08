@@ -6,13 +6,13 @@ func open(int, int) bool { return false }
 
 func hold(p *Player, in Input, frames int, blocked func(int, int) bool) {
 	for i := 0; i < frames; i++ {
-		p.Update(in, blocked)
+		p.Update(in, blocked, nil)
 	}
 }
 
 func TestWalkingStepTakesWalkFrames(t *testing.T) {
 	p := NewPlayer(0, 0) // facing down, so walking down starts without a turn
-	p.Update(Input{Dir: Down, HasDir: true}, open)
+	p.Update(Input{Dir: Down, HasDir: true}, open, nil)
 	if !p.Moving() || p.TY != 1 {
 		t.Fatalf("expected a step to start, got moving=%v tile=(%d,%d)", p.Moving(), p.TX, p.TY)
 	}
@@ -20,7 +20,7 @@ func TestWalkingStepTakesWalkFrames(t *testing.T) {
 	if !p.Moving() {
 		t.Fatal("step ended too early")
 	}
-	p.Update(Input{}, open)
+	p.Update(Input{}, open, nil)
 	if p.Moving() {
 		t.Fatal("step should have ended")
 	}
@@ -37,7 +37,7 @@ func TestRunningIsTwiceAsFast(t *testing.T) {
 func TestTapTurnsWithoutMoving(t *testing.T) {
 	p := NewPlayer(0, 0)
 	hold(p, Input{Dir: Left, HasDir: true}, TurnFrames-1, open)
-	p.Update(Input{}, open)
+	p.Update(Input{}, open, nil)
 	if p.Facing != Left || p.TX != 0 || p.Moving() {
 		t.Fatalf("tap should only turn: facing=%v tile=(%d,%d) moving=%v", p.Facing, p.TX, p.TY, p.Moving())
 	}
@@ -65,7 +65,7 @@ func TestStaminaRunsOutThenWalks(t *testing.T) {
 	run := Input{Dir: Down, HasDir: true, Run: true}
 	frames := 0
 	for p.Stamina > 0 {
-		p.Update(run, open)
+		p.Update(run, open, nil)
 		frames++
 	}
 	if want := int(StaminaMax * 60); frames < want-2 || frames > want+2 {
@@ -97,5 +97,27 @@ func TestStaminaUse(t *testing.T) {
 	used, usedPerk := StaminaMax-normal.Stamina, StaminaMax-perk.Stamina
 	if used < 1.9 || usedPerk < 0.2*used-0.05 || usedPerk > 0.2*used+0.05 {
 		t.Fatalf("2 s of running used %.2f s of stamina, %.2f with the perk", used, usedPerk)
+	}
+}
+
+func TestRoadStepsAreFaster(t *testing.T) {
+	road := func(_, ty int) bool { return ty >= 1 } // the road starts one tile down
+	for _, c := range []struct {
+		run         bool
+		off, onRoad int
+	}{{false, WalkFrames, RoadWalkFrames}, {true, RunFrames, RoadRunFrames}} {
+		p := NewPlayer(0, 0)
+		in := Input{Dir: Down, HasDir: true, Run: c.run}
+		p.Update(in, open, road) // onto the road
+		if p.StepFrames() != c.onRoad {
+			t.Errorf("run=%v: step onto a road takes %d frames, want %d", c.run, p.StepFrames(), c.onRoad)
+		}
+		p = NewPlayer(0, 1)
+		for i := 0; i < TurnFrames; i++ { // turn up, then step off the road
+			p.Update(Input{Dir: Up, HasDir: true, Run: c.run}, open, road)
+		}
+		if p.StepFrames() != c.off {
+			t.Errorf("run=%v: step off a road takes %d frames, want %d", c.run, p.StepFrames(), c.off)
+		}
 	}
 }

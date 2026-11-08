@@ -174,8 +174,8 @@ var heroLooks = map[character.Class]heroLook{
 // with OLDWORLD_SWORD / OLDWORLD_SHIELD / OLDWORLD_BOW / OLDWORLD_STAFF / OLDWORLD_STAFF_FIGHT ("rx,ry,rz,x,y,z") for tuning.
 var (
 	swordAt      = [2]rl.Vector3{{X: -75}, {Y: 0.05}}
-	shieldAt     = [2]rl.Vector3{{Y: 90}, {X: -0.11, Y: 0.14}} // outside the forearm, far enough out that the fist stays behind it
-	bowAt        = [2]rl.Vector3{{X: -80, Z: 90}, {Y: 0.05}}
+	shieldAt     = [2]rl.Vector3{{Y: 90}, {X: -0.11, Y: 0.14}}    // outside the forearm, far enough out that the fist stays behind it
+	bowAt        = [2]rl.Vector3{{X: -80, Z: -90}, {Y: 0.05}}     // the string toward the archer
 	staffAt      = [2]rl.Vector3{{X: -135}, {Y: 0.05}}            // at the side, the top tilted forward
 	staffFightAt = [2]rl.Vector3{{X: -165}, {Y: 0.034, Z: 0.058}} // in the sword stance's fist, the top a little forward
 )
@@ -510,10 +510,10 @@ func (sc *scene) drawMap(g *Game) {
 		hero.Play.Loop(hero.Moves.Rest)
 	case p.Running():
 		hero.Play.Loop(hero.Moves.Run)
-		dt *= runPace
+		dt *= runPace * world.RunFrames / float32(p.StepFrames()) // faster on roads
 	case p.Moving():
 		hero.Play.Loop(hero.Moves.Walk)
-		dt *= walkPace
+		dt *= walkPace * world.WalkFrames / float32(p.StepFrames())
 	default:
 		hero.Play.Loop(hero.Moves.Idle)
 	}

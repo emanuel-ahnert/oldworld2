@@ -269,6 +269,7 @@ type Battle struct {
 	started       bool // the first round is over
 	rng           *rand.Rand
 	events        []Event
+	quiet         bool // no messages: a copy the planner plays out
 }
 
 // New starts a battle. The seed only affects random rolls (crits, damage spread, chances).
@@ -392,6 +393,9 @@ func (b *Battle) emitHit(hit *Combatant, cue Cue, format string, args ...any) {
 
 // emitEvent adds an event with the text and the current HP and MP filled in.
 func (b *Battle) emitEvent(ev Event, format string, args ...any) {
+	if b.quiet {
+		return
+	}
 	ev.Text = fmt.Sprintf(format, args...)
 	ev.PlayerHP, ev.PlayerMP = b.Player.HP, b.Player.MP
 	ev.EnemyHP, ev.EnemyMP = b.Enemy.HP, b.Enemy.MP
