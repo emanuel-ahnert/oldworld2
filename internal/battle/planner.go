@@ -98,6 +98,7 @@ type Outcome struct {
 func Simulate(player, enemy *Combatant, seed uint64) Outcome {
 	b := New(player, enemy, seed)
 	b.quiet = true
+	b.Start()
 	for !b.Over() && b.Round < 100 {
 		b.Turn(b.PlanPlayerMove(seed+uint64(b.Round)), b.ChooseEnemyAbility())
 	}

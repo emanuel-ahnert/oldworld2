@@ -430,3 +430,70 @@ func TestDotMessageShowsDamage(t *testing.T) {
 		t.Fatalf("events %v", b.events)
 	}
 }
+
+func TestCheatDeathOncePerBattle(t *testing.T) {
+	rogue := fighter("Rogue", []Element{Physical},
+		Stats{MaxHP: 90, MaxMP: 150, Attack: 14, Magic: 5, Defense: 9, Resistance: 8, Speed: 11}, "cheat_death")
+	rogue.You = true
+	w := wolf()
+	w.Base.Attack = 40 // every bite kills a rogue on 1 HP
+	b := New(rogue, w, 1)
+	rogue.HP = 1
+	events := b.Turn(WaitID, "bite")
+	if rogue.HP != 9 {
+		t.Fatalf("after the first killing blow HP = %d, want 9 (10%%)", rogue.HP)
+	}
+	if !slices.ContainsFunc(events, func(e Event) bool { return strings.HasPrefix(e.Text, "Cheat Death!") }) {
+		t.Fatal("no Cheat Death message")
+	}
+	for i := 0; i < 5 && rogue.Alive(); i++ {
+		b.Turn(WaitID, "bite")
+	}
+	if rogue.Alive() {
+		t.Fatal("Cheat Death worked more than once in a battle")
+	}
+	// A new battle, a new chance.
+	rogue.HP = 1
+	New(rogue, w, 2).Turn(WaitID, "bite")
+	if rogue.HP != 9 {
+		t.Fatalf("in the next battle HP = %d, want 9", rogue.HP)
+	}
+}
+
+func TestWrathTotemRaisesMagicAtStart(t *testing.T) {
+	shaman := fighter("Shaman", []Element{Physical},
+		Stats{MaxHP: 105, MaxMP: 150, Attack: 11, Magic: 11, Defense: 11, Resistance: 10, Speed: 10}, "storm_bolt", "wrath_totem")
+	b := New(shaman, wolf(), 1)
+	events := b.Start()
+	if shaman.stages[Magic] != 1 || !slices.Contains(shaman.Totems(), WrathTotem) {
+		t.Fatalf("Magic stage %d, totems %v; want 1 and the Wrath Totem", shaman.stages[Magic], shaman.Totems())
+	}
+	if len(events) == 0 || events[0].Cue != CueTotem || events[0].User != shaman {
+		t.Fatalf("the first start event should put down the totem: %+v", events)
+	}
+	if New(warrior(), wolf(), 1).Start() != nil {
+		t.Fatal("a battle without the passive should start without events")
+	}
+}
+
+func TestTotemsShareOneMessageAndHealingStreamHeals(t *testing.T) {
+	shaman := fighter("Shaman", []Element{Physical},
+		Stats{MaxHP: 160, MaxMP: 150, Attack: 11, Magic: 11, Defense: 11, Resistance: 10, Speed: 10},
+		"storm_bolt", "wrath_totem", "healing_stream_totem")
+	shaman.You = true
+	b := New(shaman, wolf(), 1)
+	var totemMessages []string
+	for _, e := range b.Start() {
+		if e.Cue == CueTotem {
+			totemMessages = append(totemMessages, e.Text)
+		}
+	}
+	if len(totemMessages) != 1 || totemMessages[0] != "You put down a Wrath Totem and a Healing Stream Totem!" {
+		t.Fatalf("totem messages %q, want one naming both", totemMessages)
+	}
+	shaman.HP = 50
+	b.Turn(WaitID, WaitID)
+	if shaman.HP != 60 { // 1/16 of 160
+		t.Fatalf("HP after a round %d, want 60", shaman.HP)
+	}
+}

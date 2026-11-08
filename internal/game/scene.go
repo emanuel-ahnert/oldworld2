@@ -237,7 +237,8 @@ type scene struct {
 
 	battleOf  *battleScene
 	enemyPlay *r3d.Player
-	seen      int // battle message serial already animated
+	seen      int     // battle message serial already animated
+	totem     float32 // seconds since the hero put down their totems, -1 before
 	bg        map[procgen.ZoneType]*rl.Texture2D
 }
 
@@ -874,6 +875,39 @@ func (g *Game) drawMapOverlay(dst *gfx.Image, scale float64) {
 
 // ---- battle ----
 
+// The shaman's totems (tools/models/totem.py) and where they stand in battle: one on each side
+// of the hero.
+const (
+	totemRise  = 0.5 // seconds a totem takes to spring up out of the ground
+	totemScale = 0.7
+)
+
+var (
+	totemModels = map[battle.Special]string{
+		battle.WrathTotem:   "../generated/props/Totem_Wrath.gltf",
+		battle.HealingTotem: "../generated/props/Totem_Healing.gltf",
+	}
+	totemSpots = map[battle.Special]rl.Vector3{
+		battle.WrathTotem:   {X: -0.9, Z: -0.8},
+		battle.HealingTotem: {X: 0.7, Z: 0.5},
+	}
+)
+
+// drawTotem draws one of the hero's totems. It springs up: grows from the ground to full size,
+// overshooting a little, while turning to face the enemy.
+func (sc *scene) drawTotem(model string, pos rl.Vector3, yaw float32) {
+	t := min(1, sc.totem/totemRise)
+	// Ease out with a little overshoot ("back" easing).
+	const c1, c3 = 1.70158, 2.70158
+	u := t - 1
+	grow := 1 + c3*u*u*u + c1*u*u
+	if t > 0.3 {
+		r3d.Shadow(pos, 0.25)
+	}
+	sc.r.Draw(r3d.Object{Model: sc.lib.Model(model), Pos: pos, Yaw: yaw - 120*(1-t),
+		Scale: max(0.01, grow*totemScale), Tint: rl.White, Outline: 0.02})
+}
+
 // drawBattle draws the fighters of a battle in front of the zone's painted background.
 func (sc *scene) drawBattle(s *battleScene) {
 	hero := sc.heroModel()
@@ -885,12 +919,17 @@ func (sc *scene) drawBattle(s *battleScene) {
 		sc.heroMove, sc.heroActing = hero.Moves.Attack, false
 		hero.Stow = false
 		hero.Fight = true
+		sc.totem = -1
 	}
 	// Start the animations for a new message: the attacker strikes, the target flinches,
 	// the loser falls.
 	if s.serial != sc.seen && len(s.messages) > 0 && s.phase == phasePlay {
 		sc.seen = s.serial
 		ev := s.messages[0]
+		if ev.Cue == battle.CueTotem && ev.User == s.b.Player {
+			sc.totem = 0
+			hero.Play.Once(hero.Moves.Cast, false)
+		}
 		if ev.Cue == battle.CueUse && ev.User == s.b.Player && ev.Ability != nil {
 			sc.heroMove, sc.heroActing = heroMove(hero.Moves, ev.Ability), true
 			if ev.Ability.Delivery == battle.Self || ev.Ability.Category == battle.StatusCat {
@@ -918,6 +957,9 @@ func (sc *scene) drawBattle(s *battleScene) {
 	hero.Play.Loop(hero.Moves.Ready)
 	hero.Play.Update(frameDT)
 	sc.enemyPlay.Update(frameDT)
+	if sc.totem >= 0 {
+		sc.totem += frameDT
+	}
 
 	// Background.
 	sw, sh := float32(rl.GetRenderWidth()), float32(rl.GetRenderHeight())
@@ -953,6 +995,12 @@ func (sc *scene) drawBattle(s *battleScene) {
 	if visible(s.b.Player) {
 		r3d.Shadow(heroPos, 0.5)
 		sc.r.DrawCharacter(hero, heroPos, toward(heroPos, enemyPos)+5)
+	}
+	if sc.totem >= 0 {
+		for _, t := range s.b.Player.Totems() {
+			pos := totemSpots[t]
+			sc.drawTotem(totemModels[t], pos, toward(pos, enemyPos))
+		}
 	}
 	if visible(s.b.Enemy) && (s.b.Enemy.Alive() || s.phase == phasePlay) {
 		r3d.Shadow(enemyPos, 0.3+f.size*0.2)

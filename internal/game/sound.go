@@ -57,6 +57,7 @@ var cueSounds = map[battle.Cue]string{
 	battle.CueStatDown: "stat_down",
 	battle.CueStatus:   "status",
 	battle.CueHeal:     "heal_soft",
+	battle.CueTotem:    "nature",
 }
 
 // abilitySound is the sound of using an ability: spells by element, weapons and claws by

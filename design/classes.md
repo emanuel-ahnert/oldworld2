@@ -65,6 +65,9 @@ Starting and level-up abilities of every class (the level is when it's learned; 
 | Rogue | Poisoned Blade | 3 | 20 | 20 | Nature, melee, Poison |
 | Rogue | Kidney Shot | 6 | 20 | 25 | Stuns for 2 rounds, once per battle |
 | Rogue | Improved Sprint | 6 | — | — | Passive, on the map: sprinting uses up stamina at only 20% of the normal rate (learned along with Kidney Shot) |
+| Rogue | Cheat Death | 8 | — | — | Passive: once per battle, an attack that would kill the rogue leaves it at 10% HP instead (damage over time can still kill; learned along with Gut Slash) |
+| Shaman | Magic Wrath Totem | 4 | — | — | Passive: at the start of every battle the shaman puts down a totem that raises Magic by 1 stage for the battle (learned along with Stone Shock) |
+| Shaman | Healing Stream Totem | 4 | — | — | Passive: at the start of every battle the shaman also puts down a totem that heals 1/16 of max HP at the end of every round. Both totems are announced in one message |
 | Rogue | Gut Slash | 8 | 75 | 30 | High power |
 | Hunter | Steady Shot | Start | 50 | 20 | Physical, ranged |
 | Hunter | Venom Arrow | Start | 25 | 20 | Nature, ranged, Poison |

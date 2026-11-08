@@ -40,17 +40,20 @@ func (s Stat) String() string { return statNames[s] }
 type Special int
 
 const (
-	NoSpecial  Special = iota
-	Overwhelm          // usable only right after the user missed or was dodged; can't be dodged
-	ManaShield         // half of the damage taken comes out of MP
-	Blink              // the next attack against the user misses
-	Smoke              // ranged attacks and targeted spells can't target the user
-	Enrage             // passive: taking damage may enrage (+40% damage), always on critical hits
-	SecondWind         // passive: taking a hit may start Regen (30%, always on critical hits)
-	Shield             // absorbs damage up to a share of max HP
-	HolySeal           // physical hits deal extra Holy damage
-	BearForm           // rest of the battle: Defense up, attacks are melee and hit Defense
-	DemonArmor         // passive: heals 1/16 max HP every round
+	NoSpecial    Special = iota
+	Overwhelm            // usable only right after the user missed or was dodged; can't be dodged
+	ManaShield           // half of the damage taken comes out of MP
+	Blink                // the next attack against the user misses
+	Smoke                // ranged attacks and targeted spells can't target the user
+	Enrage               // passive: taking damage may enrage (+40% damage), always on critical hits
+	SecondWind           // passive: taking a hit may start Regen (30%, always on critical hits)
+	Shield               // absorbs damage up to a share of max HP
+	HolySeal             // physical hits deal extra Holy damage
+	BearForm             // rest of the battle: Defense up, attacks are melee and hit Defense
+	DemonArmor           // passive: heals 1/16 max HP every round
+	CheatDeath           // passive: once per battle, an attack that would defeat the user leaves it at 10% HP
+	WrathTotem           // passive: puts down a totem at the start of a battle, Magic +1 stage
+	HealingTotem         // passive: puts down a totem at the start of a battle that heals 1/16 max HP every round
 )
 
 // StatChange raises or lowers a stat of the user or the target.
@@ -157,8 +160,14 @@ func init() {
 			Text: "A ranged attack"},
 		Ability{ID: "rogue_poisoned_blade", Name: "Poisoned Blade", Element: Nature, Category: PhysicalCat, Delivery: Melee, Power: 20, Cost: 20,
 			Inflict: []Inflict{{Status: Poison}}, Text: "Poison: 1/16 HP per round"},
+		Ability{ID: "wrath_totem", Name: "Magic Wrath Totem", Passive: true, Special: WrathTotem,
+			Text: "Passive: puts down a totem at the start of every battle that raises Magic by 1 stage"},
+		Ability{ID: "healing_stream_totem", Name: "Healing Stream Totem", Passive: true, Special: HealingTotem,
+			Text: "Passive: puts down a totem at the start of every battle that heals 1/16 HP per round"},
 		Ability{ID: "improved_sprint", Name: "Improved Sprint", Passive: true,
 			Text: "Passive, on the map: sprinting uses up endurance at only 20% of the normal rate"},
+		Ability{ID: "cheat_death", Name: "Cheat Death", Passive: true, Special: CheatDeath,
+			Text: "Passive: once per battle, an attack that would kill you leaves you at 10% HP"},
 		Ability{ID: "kidney_shot", Name: "Kidney Shot", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 20, Cost: 25,
 			Uses: 1, Inflict: []Inflict{{Status: Stun, Duration: 2}}, Text: "Once per battle: stuns for 2 rounds"},
 		Ability{ID: "gut_slash", Name: "Gut Slash", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 75, Cost: 30,

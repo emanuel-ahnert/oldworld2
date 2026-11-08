@@ -153,9 +153,11 @@ func TestAllClassesComplete(t *testing.T) {
 				t.Errorf("%s: unknown ability %q at level %d", info.Name, id, level)
 			}
 		}
-		for level, id := range info.Perks {
-			if a := battle.Get(id); a == nil || !a.Passive {
-				t.Errorf("%s: perk %q at level %d is not a known passive", info.Name, id, level)
+		for level, ids := range info.Perks {
+			for _, id := range ids {
+				if a := battle.Get(id); a == nil || !a.Passive {
+					t.Errorf("%s: perk %q at level %d is not a known passive", info.Name, id, level)
+				}
 			}
 		}
 		ch := New(c)

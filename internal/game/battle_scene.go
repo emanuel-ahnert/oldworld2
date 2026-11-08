@@ -86,6 +86,7 @@ func newBattleScene(g *Game, npc *world.NPC) *battleScene {
 		appear = "A wild " + enemy.Name + " appears!"
 	}
 	s.messages = []battle.Event{{Text: appear, PlayerHP: player.HP, PlayerMP: player.MP, EnemyHP: enemy.HP}}
+	s.messages = append(s.messages, s.b.Start()...) // passives that act as the battle begins
 	return s
 }
 

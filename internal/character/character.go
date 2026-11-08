@@ -33,10 +33,10 @@ type ClassInfo struct {
 	Affinity    []battle.Element // elements the class gets the Affinity bonus on; heroes are always Physical-typed
 	Base        battle.Stats     // level 1
 	Start       []string
-	Learn       map[int]string // level → ability learned automatically
-	Perks       map[int]string // level → a passive learned automatically too, e.g. one for the map
-	HPRegen     float64        // multiplier for passive HP regeneration on the map
-	Description string         // one line for the new-game screen
+	Learn       map[int]string   // level → ability learned automatically
+	Perks       map[int][]string // level → passives learned automatically too, e.g. one for the map
+	HPRegen     float64          // multiplier for passive HP regeneration on the map
+	Description string           // one line for the new-game screen
 }
 
 var classes = map[Class]ClassInfo{
@@ -64,7 +64,7 @@ var classes = map[Class]ClassInfo{
 		Base:        battle.Stats{MaxHP: 95, MaxMP: 150, Attack: 14, Magic: 5, Defense: 9, Resistance: 8, Speed: 11},
 		Start:       []string{"rogue_quick_stab", "rogue_smoke_veil", "jab"},
 		Learn:       map[int]string{2: "knife_throw", 3: "rogue_poisoned_blade", 6: "kidney_shot", 8: "gut_slash"},
-		Perks:       map[int]string{6: "improved_sprint"},
+		Perks:       map[int][]string{6: {"improved_sprint"}, 8: {"cheat_death"}},
 		HPRegen:     1,
 		Description: "Fast striker with poisons and smoke.",
 	},
@@ -110,6 +110,7 @@ var classes = map[Class]ClassInfo{
 		Base:        battle.Stats{MaxHP: 105, MaxMP: 150, Attack: 11, Magic: 11, Defense: 11, Resistance: 10, Speed: 10},
 		Start:       []string{"storm_bolt", "flame_shock", "zap"},
 		Learn:       map[int]string{2: "chain_lightning", 3: "healing_wave", 4: "stone_shock", 6: "frost_shock"},
+		Perks:       map[int][]string{4: {"wrath_totem", "healing_stream_totem"}},
 		HPRegen:     1,
 		Description: "Caller of storm, flame and water.",
 	},
@@ -313,11 +314,13 @@ func (c *Character) GainXP(xp int) []LevelUp {
 		c.Level++
 		up := LevelUp{Level: c.Level}
 		info := c.Class.Info()
-		for _, learned := range []map[int]string{info.Learn, info.Perks} {
-			if id, ok := learned[c.Level]; ok {
-				c.learn(id)
-				up.Learned = append(up.Learned, id)
-			}
+		ids := info.Perks[c.Level]
+		if id, ok := info.Learn[c.Level]; ok {
+			ids = append([]string{id}, ids...)
+		}
+		for _, id := range ids {
+			c.learn(id)
+			up.Learned = append(up.Learned, id)
 		}
 		ups = append(ups, up)
 	}

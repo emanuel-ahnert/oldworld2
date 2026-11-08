@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -89,6 +90,8 @@ type Combatant struct {
 	smoke       int
 	evadeNext   bool
 	overwhelmOK bool           // the user missed or was dodged last turn
+	cheated     bool           // Cheat Death was used this battle
+	totems      []Special      // the totems standing (WrathTotem, HealingTotem)
 	used        map[string]int // uses of limited abilities this battle
 }
 
@@ -97,7 +100,7 @@ func (c *Combatant) init() {
 	c.stages = [numStats]int{}
 	c.enraged, c.regen, c.shield, c.sealed, c.manaShield, c.smoke = 0, 0, 0, 0, 0, 0
 	c.bear = false
-	c.evadeNext, c.overwhelmOK = false, false
+	c.evadeNext, c.overwhelmOK, c.cheated, c.totems = false, false, false, nil
 	c.used = map[string]int{}
 }
 
@@ -214,6 +217,9 @@ func (c *Combatant) Effects() []Effect {
 	if c.has(DemonArmor) {
 		out = append(out, Effect{"Demon Armor", true})
 	}
+	if slices.Contains(c.totems, HealingTotem) {
+		out = append(out, Effect{"Healing Stream", true})
+	}
 	if c.manaShield > 0 {
 		out = append(out, Effect{"Mana Shield", true})
 	}
@@ -260,6 +266,7 @@ const (
 	CueStatDown
 	CueStatus // a status effect is inflicted
 	CueHeal
+	CueTotem // a totem is put down (Event.User)
 )
 
 // Battle is a 1v1 fight.
@@ -278,6 +285,35 @@ func New(player, enemy *Combatant, seed uint64) *Battle {
 	enemy.init()
 	return &Battle{Player: player, Enemy: enemy, rng: rand.New(rand.NewPCG(seed, seed^0x9E3779B97F4A7C15))}
 }
+
+// Start resolves what happens as the battle begins, before the first round: the totems
+// (all announced in one message). It returns the events.
+func (b *Battle) Start() []Event {
+	b.events = nil
+	for _, c := range []*Combatant{b.Player, b.Enemy} {
+		var names []string
+		for _, t := range []struct {
+			kind Special
+			name string
+		}{{WrathTotem, "a Wrath Totem"}, {HealingTotem, "a Healing Stream Totem"}} {
+			if c.has(t.kind) {
+				c.totems = append(c.totems, t.kind)
+				names = append(names, t.name)
+			}
+		}
+		if len(names) == 0 {
+			continue
+		}
+		b.emitEvent(Event{Cue: CueTotem, User: c}, "%s down %s!", c.Verb("put"), strings.Join(names, " and "))
+		if slices.Contains(c.totems, WrathTotem) {
+			b.changeStat(c, Magic, 1)
+		}
+	}
+	return b.events
+}
+
+// Totems returns the totems a combatant has standing.
+func (c *Combatant) Totems() []Special { return c.totems }
 
 // Over reports whether one side is defeated.
 func (b *Battle) Over() bool { return !b.Player.Alive() || !b.Enemy.Alive() }
@@ -531,11 +567,31 @@ func (b *Battle) sealBurn(user, target *Combatant) {
 		return
 	}
 	dmg := b.absorb(target, b.Damage(user, target, seal, false, 0.85+0.15*b.rng.Float64()))
-	target.HP = max(0, target.HP-dmg)
+	cheated := b.attackDamage(target, dmg)
 	b.emitHit(target, CueHit, "The seal burns %s for %d.", target.Object(), dmg)
+	if cheated {
+		b.cheatDeath(target)
+	}
 	if !target.Alive() {
 		b.emitCue(CueDefeat, "%s defeated!", target.Be())
 	}
+}
+
+// attackDamage takes an attack's damage off the target's HP. With Cheat Death, the first blow
+// of the battle that would defeat it leaves it at 10% HP instead; it reports whether that
+// happened, so the caller announces it after the hit.
+func (b *Battle) attackDamage(target *Combatant, dmg int) (cheated bool) {
+	if dmg >= target.HP && target.has(CheatDeath) && !target.cheated {
+		target.cheated = true
+		target.HP = max(1, target.Base.MaxHP/10)
+		return true
+	}
+	target.HP = max(0, target.HP-dmg)
+	return false
+}
+
+func (b *Battle) cheatDeath(c *Combatant) {
+	b.emitCue(CueHeal, "Cheat Death! %s the killing blow with %d HP left.", c.Verb("survive"), c.HP)
 }
 
 // absorb takes damage out of a Shield and Mana Shield first; it returns what reaches HP.
@@ -604,7 +660,7 @@ func (b *Battle) hit(user, target *Combatant, a *Ability) {
 	}
 	crit := b.rng.Float64() < critRate
 	dmg := b.absorb(target, b.Damage(user, target, a, crit, 0.85+0.15*b.rng.Float64()))
-	target.HP = max(0, target.HP-dmg)
+	cheated := b.attackDamage(target, dmg)
 	cue := CueHit
 	if crit {
 		cue = CueCrit
@@ -620,6 +676,9 @@ func (b *Battle) hit(user, target *Combatant, a *Ability) {
 		b.emitHit(target, cue, "It's not very effective...")
 	default:
 		b.emitHit(target, cue, "%s %d damage.", target.Verb("take"), dmg)
+	}
+	if cheated {
+		b.cheatDeath(target)
 	}
 	if !target.Alive() {
 		b.emitCue(CueDefeat, "%s defeated!", target.Be())
@@ -743,6 +802,12 @@ func (b *Battle) endOfRound() {
 			if heal := min(max(1, c.Base.MaxHP/16), c.Base.MaxHP-c.HP); heal > 0 {
 				c.HP += heal
 				b.emitCue(CueHeal, "Demon Armor restores %d HP.", heal)
+			}
+		}
+		if slices.Contains(c.totems, HealingTotem) && c.Alive() {
+			if heal := min(max(1, c.Base.MaxHP/16), c.Base.MaxHP-c.HP); heal > 0 {
+				c.HP += heal
+				b.emitCue(CueHeal, "The Healing Stream Totem restores %d HP.", heal)
 			}
 		}
 		if c.regen > 0 && c.Alive() {
