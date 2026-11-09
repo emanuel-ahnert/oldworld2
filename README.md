@@ -90,10 +90,13 @@ A gamepad works too: the D-pad moves, A is Space.
 plays a scripted input and saves a screenshot.
 
     tools/release/windows.sh    # the Windows release, built on Linux: dist/oldworld2-windows-amd64.exe
+    tools/release/linux.sh      # the Linux release: dist/oldworld2-linux-amd64
 
-The release is one .exe with the assets inside. It unpacks them to `%LOCALAPPDATA%\oldworld2`
-on the first start and saves to `%AppData%\oldworld2\save.db`. The build needs the Quaternius
-packs and [mise](https://mise.jdx.dev), which installs the Zig C cross compiler for raylib. If
+Each release is one file with the assets inside. It unpacks them on the first start, to
+`%LOCALAPPDATA%\oldworld2` on Windows and `~/.cache/oldworld2` on Linux, and saves to
+`%AppData%\oldworld2\save.db` or `~/.local/share/oldworld2/save.db`. The Linux build targets
+glibc 2.31, so it runs on Ubuntu 20.04, Debian 11 and newer. The builds need the Quaternius
+packs and [mise](https://mise.jdx.dev), which installs the Zig C compiler for raylib. If
 the game starts loading another pack model, add it to `tools/release/pack_models.txt` (a test
 checks this).
 
