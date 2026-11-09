@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"oldworld2/internal/battle"
-	"oldworld2/internal/character"
 	"oldworld2/internal/procgen"
 	"oldworld2/internal/save"
 	"oldworld2/internal/world"
@@ -113,7 +112,7 @@ func (d *demoBot) campPressed() bool {
 func (d *demoBot) input() world.Input {
 	g, p := d.g, d.g.player
 	st := g.char.Stats()
-	hp, mp := g.char.HP/float64(st.MaxHP), g.char.MP/float64(max(1, st.MaxMP))
+	hp, mp := g.char.HP/float64(st.MaxHP), g.char.ManaShare()
 	if d.noRest > 0 {
 		d.noRest--
 	}
@@ -329,7 +328,7 @@ func (d *demoBot) readyFor(n *world.NPC) bool {
 	st := d.g.char.Stats()
 	extra := 0.15 * float64(group-1)
 	return d.g.char.HP/float64(st.MaxHP) >= min(demoRestUntil, demoRestHP+extra) &&
-		d.g.char.MP/float64(max(1, st.MaxMP)) >= min(demoRestUntil, demoRestMP+extra)
+		d.g.char.ManaShare() >= min(demoRestUntil, demoRestMP+extra)
 }
 
 // explore picks a spot 20 to 40 tiles ahead, roughly in the current heading: open ground,
@@ -543,8 +542,8 @@ func abs(v int) int {
 
 // demoOpeners are the key moves the demo bot opens a battle with when it knows them: the
 // warrior's Charge, the rogue's Cheap Shot, the paladin's Judgment Hammer (all stuns, so the
-// rest of the fight starts with a free round).
-var demoOpeners = []string{"charge", "cheap_shot", "judgment_hammer"}
+// rest of the fight starts with a free round) and the mage's Blink (the first blow misses).
+var demoOpeners = []string{"charge", "cheap_shot", "judgment_hammer", "blink"}
 
 // demoOpener is the bot's first move of a battle, or "" to leave the move to the planner.
 func demoOpener(b *battle.Battle) string {
@@ -560,25 +559,4 @@ func demoOpener(b *battle.Battle) string {
 		}
 	}
 	return ""
-}
-
-// demoSlotOpeners puts the openers the bot knows into its ability slots: into a free slot, or
-// in place of a self-targeted status move (the rogue's Smoke Veil gives way to Cheap Shot),
-// else of the last slot.
-func demoSlotOpeners(ch *character.Character) {
-	for _, id := range demoOpeners {
-		if !ch.Slottable(id) || slices.Contains(ch.Active, id) || ch.Equip(id) {
-			continue
-		}
-		slot := len(ch.Active) - 1
-		for i, a := range ch.Active {
-			if ab := battle.Get(a); ab != nil && ab.Category == battle.StatusCat && ab.Delivery == battle.Self {
-				slot = i
-				break
-			}
-		}
-		if !slices.Contains(demoOpeners, ch.Active[slot]) {
-			ch.Replace(slot, id)
-		}
-	}
 }

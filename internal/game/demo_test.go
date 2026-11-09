@@ -105,7 +105,7 @@ func TestDemoOpensWithKeyMoves(t *testing.T) {
 		for c.Level < tc.level {
 			c.GainXP(character.XPToNext(c.Level))
 		}
-		demoSlotOpeners(c)
+		c.EquipBotMoves()
 		b := battle.New(c.Combatant(), character.Enemy(0, tc.level), 1)
 		if got := demoOpener(b); got != tc.want {
 			t.Fatalf("%v opens with %q, want %q (slots %q)", tc.class, got, tc.want, c.Active)

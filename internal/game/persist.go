@@ -76,6 +76,7 @@ func (g *Game) restore(st *save.State) {
 		Class: character.Class(c.Class), Level: c.Level, XP: c.XP,
 		HP: c.HP, MP: c.MP, Money: c.Money, Known: renamedAbilities(c.Known), Active: renamedAbilities(c.Active),
 	}
+	g.char.CatchUp()
 	p := st.Player
 	g.world.Prepare(p.X, p.Y)
 	g.player = world.NewPlayer(p.X, p.Y)

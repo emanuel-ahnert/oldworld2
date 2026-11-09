@@ -493,8 +493,8 @@ func TestTotemsShareOneMessageAndHealingStreamHeals(t *testing.T) {
 	}
 	shaman.HP = 50
 	b.Turn(WaitID, WaitID)
-	if shaman.HP != 60 { // 1/16 of 160
-		t.Fatalf("HP after a round %d, want 60", shaman.HP)
+	if shaman.HP != 55 { // 1/32 of 160
+		t.Fatalf("HP after a round %d, want 55", shaman.HP)
 	}
 }
 
@@ -581,5 +581,154 @@ func TestThornsHurtMeleeAttackers(t *testing.T) {
 	}
 	if got := attacked("sling_stone", "thorns"); got != 0 {
 		t.Fatalf("a ranged attack against Thorns: the attacker took %d, want 0", got)
+	}
+}
+
+func TestIceBlock(t *testing.T) {
+	m := mage(200)
+	m.Abilities = append(m.Abilities, "ice_block")
+	w := wolf()
+	b := New(m, w, 1)
+	b.Turn("ice_block", "bite") // Priority +1: the block is up before the faster wolf bites
+	if m.HP != m.Base.MaxHP {
+		t.Fatalf("the bite got through the ice block: %d/%d HP", m.HP, m.Base.MaxHP)
+	}
+	menu := b.MenuOptions(m)
+	if !slices.Contains(menu, CancelIceBlockID) || slices.Contains(menu, "ice_block") {
+		t.Fatalf("menu inside the ice block: %q, want Cancel in Ice Block's place", menu)
+	}
+	if ok, _ := b.Usable(m, "ice_bolt"); ok {
+		t.Fatal("Ice Bolt usable inside the ice block")
+	}
+	b.Turn(WaitID, "bite") // the second round: still shielded, then it melts
+	if m.HP != m.Base.MaxHP || m.iceBlock != 0 {
+		t.Fatalf("after round 2: %d HP, %d rounds of ice left; want full HP and no ice", m.HP, m.iceBlock)
+	}
+	b.Turn(WaitID, "bite")
+	if m.HP == m.Base.MaxHP {
+		t.Fatal("the bite after the ice melted did no damage")
+	}
+
+	// Cancelling takes no turn: the ice is gone and every move is back.
+	b.Turn("ice_block", WaitID)
+	if ev := b.CancelIceBlock(); len(ev) == 0 || m.iceBlock != 0 || b.Round != 4 {
+		t.Fatalf("cancel: %d events, %d rounds of ice, round %d", len(ev), m.iceBlock, b.Round)
+	}
+	if ok, _ := b.Usable(m, "ice_bolt"); !ok {
+		t.Fatal("Ice Bolt not usable after cancelling")
+	}
+}
+
+func TestIgniteAndIceBolt(t *testing.T) {
+	m, w := mage(200), wolf()
+	m.Abilities = append(m.Abilities, "ignite")
+	w.Base.MaxHP, w.HP = 160, 160
+	b := New(m, w, 1)
+	b.Turn("ignite", WaitID)
+	if w.status[Ignite] != igniteRounds-1 || w.HP != 150 {
+		t.Fatalf("ignite: %d rounds left, %d HP; want %d and 150", w.status[Ignite], w.HP, igniteRounds-1)
+	}
+	b.Turn("ice_bolt", WaitID)
+	if w.stages[Speed] != -1 {
+		t.Fatalf("Ice Bolt: Speed stage %d, want -1 every time", w.stages[Speed])
+	}
+	if Get("blink").Priority != 2 {
+		t.Fatal("Blink should have priority +2")
+	}
+}
+
+func TestRage(t *testing.T) {
+	w := warrior()
+	w.Abilities = append(w.Abilities, "punch", "charge")
+	w.Resource, w.Base.MaxMP, w.MP = Rage, 100, 0
+	b := New(w, wolf(), 1)
+	if ok, why := b.Usable(w, "heavy_strike"); ok || why != "Not enough Rage" {
+		t.Fatalf("Heavy Strike with no rage: usable %v (%q)", ok, why)
+	}
+	b.Turn("charge", WaitID) // +15, the wolf is stunned
+	if w.MP != 15 {
+		t.Fatalf("after Charge: %d rage, want 15", w.MP)
+	}
+	b.Turn("punch", WaitID) // +10
+	if w.MP != 25 {
+		t.Fatalf("after Punch: %d rage, want 25", w.MP)
+	}
+	b.Turn("heavy_strike", "bite") // -15, +5 or +15 for the bite
+	if w.MP != 15 && w.MP != 25 {
+		t.Fatalf("after Heavy Strike and a bite: %d rage, want 15 (+5) or 25 (crit)", w.MP)
+	}
+}
+
+func TestEnergy(t *testing.T) {
+	r := fighter("Rogue", []Element{Physical}, Stats{MaxHP: 300, MaxMP: 100, Attack: 14, Defense: 9, Speed: 11},
+		"rogue_quick_stab", "jab")
+	r.Resource = Energy
+	b := New(r, fighter("Dummy", []Element{Physical}, Stats{MaxHP: 999, Defense: 99, Speed: 1}), 1)
+	b.Turn("rogue_quick_stab", WaitID) // 100 - 40 + 10
+	if r.MP != 70 {
+		t.Fatalf("after Quick Stab: %d energy, want 70", r.MP)
+	}
+	for range 4 {
+		b.Turn("jab", WaitID)
+	}
+	if r.MP != 100 {
+		t.Fatalf("energy goes over the cap: %d, want 100", r.MP)
+	}
+}
+
+// Frostfire Bolt strikes with Ice or Fire, whichever the target is weaker to.
+func TestFrostfireBolt(t *testing.T) {
+	ff, ice := Get("frostfire_bolt"), Get("ice_bolt")
+	m := mage(200)
+	for _, tc := range []struct {
+		types []Element
+		el    Element
+	}{{[]Element{Nature}, Ice}, {[]Element{Ice}, Fire}, {[]Element{Dark}, Fire}} {
+		target := fighter("Dummy", tc.types, Stats{MaxHP: 100, Resistance: 10})
+		if got := element(ff, target); got != tc.el {
+			t.Fatalf("against %v: %v, want %v", tc.types, got, tc.el)
+		}
+	}
+	// Against an Ice type it does Fire damage: as much as Ice Bolt would as a Fire spell.
+	target := fighter("Dummy", []Element{Ice}, Stats{MaxHP: 100, Resistance: 10})
+	b := New(m, target, 1)
+	sameFire := *ice
+	sameFire.Element = Fire
+	if got, want := b.Damage(m, target, ff, false, 1), b.Damage(m, target, &sameFire, false, 1); got != want {
+		t.Fatalf("Frostfire vs Ice type: %d, want %d (fire)", got, want)
+	}
+}
+
+// The Vampire's Life Drain drains half as much as the warlock's Drain Life: 1/16 per round.
+func TestVampireDrainIsHalf(t *testing.T) {
+	drained := func(id string) int {
+		p := fighter("Hero", []Element{Physical}, Stats{MaxHP: 160, Defense: 10, Resistance: 10, Speed: 1})
+		v := fighter("Vampire", []Element{Dark}, Stats{MaxHP: 100, MaxMP: 100, Magic: 12, Speed: 20}, id)
+		v.HP = 50
+		b := New(p, v, 1)
+		b.Turn(WaitID, id)
+		hit := 160 - p.HP
+		b.Turn(WaitID, WaitID)
+		if v.HP <= 50 {
+			t.Fatalf("%s: the vampire wasn't healed", id)
+		}
+		return 160 - p.HP - hit // one round of the drain
+	}
+	if got := drained("life_drain"); got != 10 {
+		t.Fatalf("Vampire's Life Drain: %d per round, want 10 (1/16)", got)
+	}
+	if got := drained("drain_life"); got != 20 {
+		t.Fatalf("warlock's Drain Life: %d per round, want 20 (1/8)", got)
+	}
+}
+
+// Burn only hurts over time: it doesn't cut the burned side's physical damage.
+func TestBurnKeepsPhysicalDamage(t *testing.T) {
+	w := wolf()
+	b := New(warrior(), w, 1)
+	before := b.Damage(w, b.Player, Get("bite"), false, 1)
+	b.inflict(w, Inflict{Status: Burn})
+	if got := b.Damage(w, b.Player, Get("bite"), false, 1); got != before {
+		t.Fatalf("bite while burned: %d, want %d", got, before)
 	}
 }

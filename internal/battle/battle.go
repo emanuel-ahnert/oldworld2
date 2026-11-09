@@ -11,27 +11,32 @@ import (
 
 // Tuning (design/mechanics.md, Damage Formula and Status Effects).
 const (
-	damageScale     = 3.0
-	baseCrit        = 1.0 / 16
-	preyOnWeakCrit  = 0.1  // crit chance per level above the target, with Prey on the Weak
-	poisonResist    = 0.75 // how much less poison hurts with Poison Resistance
-	thornsShare     = 16   // Thorns hurts melee attackers for 1/16 of the defender's max HP
-	critMultiplier  = 1.5
-	affinityBonus   = 1.5
-	enrageChance    = 0.5
-	secondWindOdds  = 0.3
-	enrageBonus     = 1.4
-	enrageRounds    = 4
-	secondWindRegen = 3 // rounds of Regen (1/16 max HP each) that Second Wind starts
-	flyingDodge     = 0.5
-	dotRounds       = 10 // 1/16 effects last about the rest of the battle
-	drainRounds     = 5  // Drain is twice as strong and heals, so it is shorter
-	manaShieldShare = 0.5
-	shieldShare     = 0.25 // a Shield absorbs this share of max HP
-	dreadOdds       = 0.5  // chance that Dread makes the target lose its turn
-	sealPower       = 20   // Holy Seal: power of the extra Holy damage on physical hits
-	bearDefense     = 2    // Bear Form: Defense stages gained
-	bearHeal        = 0.25 // and the share of max HP restored
+	damageScale       = 3.0
+	baseCrit          = 1.0 / 16
+	preyOnWeakCrit    = 0.1  // crit chance per level above the target, with Prey on the Weak
+	poisonResist      = 0.75 // how much less poison hurts with Poison Resistance
+	thornsShare       = 16   // Thorns hurts melee attackers for 1/16 of the defender's max HP
+	critMultiplier    = 1.5
+	affinityBonus     = 1.5
+	enrageChance      = 0.5
+	secondWindOdds    = 0.3
+	enrageBonus       = 1.4
+	enrageRounds      = 4
+	secondWindRegen   = 3 // rounds of Regen (1/16 max HP each) that Second Wind starts
+	flyingDodge       = 0.5
+	dotRounds         = 10 // 1/16 effects last about the rest of the battle
+	drainRounds       = 5  // Drain is twice as strong and heals, so it is shorter
+	manaShieldShare   = 0.5
+	shieldShare       = 0.25 // a Shield absorbs this share of max HP
+	dreadOdds         = 0.5  // chance that Dread makes the target lose its turn
+	sealPower         = 20   // Holy Seal: power of the extra Holy damage on physical hits
+	bearDefense       = 2    // Bear Form: Defense stages gained
+	bearHeal          = 0.25 // and the share of max HP restored
+	igniteRounds      = 8    // Ignite burns this long
+	rageOnHit         = 5    // rage a warrior gains from taking damage...
+	rageOnCrit        = 15   // ...and from a critical hit
+	energyPerRound    = 10   // energy a rogue regains every round
+	healingTotemShare = 32   // the Healing Stream Totem heals 1/32 of max HP per round
 )
 
 // StatusKind is a status effect.
@@ -49,15 +54,17 @@ const (
 	Dread   // may lose the turn
 	Silence // can't use spells
 	Swarm   // Insect Swarm: 1/16
+	Ignite  // Fire damage over time, 1/16
+	Leech   // the Vampire's Drain: like Drain at half strength, 1/16 max HP per round
 	numStatus
 )
 
-var statusNames = [numStatus]string{"Burn", "Poison", "Bleed", "Freeze", "Stun", "Drain", "Wither", "Pain", "Dread", "Silence", "Swarm"}
+var statusNames = [numStatus]string{"Burn", "Poison", "Bleed", "Freeze", "Stun", "Drain", "Wither", "Pain", "Dread", "Silence", "Swarm", "Ignite", "Drain"}
 
 func (s StatusKind) String() string { return statusNames[s] }
 
 func (s StatusKind) dot() bool {
-	return s == Burn || s == Poison || s == Bleed || s == Drain || s == Wither || s == Pain || s == Swarm
+	return s == Burn || s == Poison || s == Bleed || s == Drain || s == Wither || s == Pain || s == Swarm || s == Ignite || s == Leech
 }
 func (s StatusKind) disables() bool    { return s == Freeze || s == Stun }
 func (s StatusKind) breaksOnHit() bool { return s == Freeze }
@@ -68,6 +75,19 @@ type Stats struct {
 	Attack, Magic              int
 	Defense, Resistance, Speed int
 }
+
+// Resource is what a combatant's abilities cost: mana (MP) for most, rage for the warrior
+// (starts every battle empty, built by fighting) and energy for the rogue (starts full,
+// regenerates every round). The battle keeps all three in MP and Base.MaxMP.
+type Resource int
+
+const (
+	Mana Resource = iota
+	Rage
+	Energy
+)
+
+func (r Resource) String() string { return [...]string{"MP", "Rage", "Energy"}[r] }
 
 // Combatant is one side of a battle. HP and MP are the live values; they are written back
 // to the character after the battle (HP and MP are global, see design/mechanics.md).
@@ -81,6 +101,7 @@ type Combatant struct {
 	Abilities []string // active abilities, including passives
 	Flying    bool
 	You       bool // the player: messages say "You use" instead of "Wolf uses"
+	Resource  Resource
 
 	stages      [numStats]int
 	status      map[StatusKind]int // rounds left
@@ -91,6 +112,7 @@ type Combatant struct {
 	bear        bool
 	manaShield  int
 	smoke       int
+	iceBlock    int // rounds of Ice Block left
 	evadeNext   bool
 	overwhelmOK bool           // the user missed or was dodged last turn
 	cheated     bool           // Cheat Death was used this battle
@@ -101,7 +123,7 @@ type Combatant struct {
 func (c *Combatant) init() {
 	c.status = map[StatusKind]int{}
 	c.stages = [numStats]int{}
-	c.enraged, c.regen, c.shield, c.sealed, c.manaShield, c.smoke = 0, 0, 0, 0, 0, 0
+	c.enraged, c.regen, c.shield, c.sealed, c.manaShield, c.smoke, c.iceBlock = 0, 0, 0, 0, 0, 0, 0
 	c.bear = false
 	c.evadeNext, c.overwhelmOK, c.cheated, c.totems = false, false, false, nil
 	c.used = map[string]int{}
@@ -232,6 +254,9 @@ func (c *Combatant) Effects() []Effect {
 	if c.evadeNext {
 		out = append(out, Effect{"Blink", true})
 	}
+	if c.iceBlock > 0 {
+		out = append(out, Effect{"Ice Block", true})
+	}
 	for k := StatusKind(0); k < numStatus; k++ {
 		if c.status[k] > 0 {
 			out = append(out, Effect{k.String(), false})
@@ -335,8 +360,12 @@ func (b *Battle) Usable(user *Combatant, id string) (bool, string) {
 	}
 	target := b.foe(user)
 	switch {
+	case user.iceBlock > 0 && a.Special != CancelIceBlock:
+		return false, "Inside the ice block: wait or cancel it"
+	case a.Special == CancelIceBlock && user.iceBlock == 0:
+		return false, "No ice block to cancel"
 	case user.MP < a.Cost:
-		return false, "Not enough MP"
+		return false, "Not enough " + user.Resource.String()
 	case a.Special == Overwhelm && !user.overwhelmOK:
 		return false, "Only after a miss or dodge"
 	case a.Opener && b.started:
@@ -376,6 +405,8 @@ func (b *Battle) MenuOptions(user *Combatant) []string {
 		case a == nil || a.Passive:
 		case a.Fallback:
 			basic = append(basic, id)
+		case a.Special == IceBlock && user.iceBlock > 0:
+			regular = append(regular, CancelIceBlockID) // the ice block's slot cancels it
 		default:
 			regular = append(regular, id)
 		}
@@ -466,7 +497,7 @@ func (b *Battle) act(user *Combatant, a *Ability) {
 		b.emit("%s can't use %s!", user.Subject(), a.Name)
 		return
 	}
-	user.MP -= a.Cost
+	user.MP = min(user.Base.MaxMP, user.MP-a.Cost+a.Gain)
 	user.used[a.ID]++
 	b.emitEvent(Event{Cue: CueUse, Ability: a, User: user}, "%s %s!", user.Verb("use"), a.Name)
 	user.overwhelmOK = false
@@ -476,6 +507,10 @@ func (b *Battle) act(user *Combatant, a *Ability) {
 		return
 	}
 
+	if target.iceBlock > 0 {
+		b.missed(user, "The ice block shields %s!", target.Object())
+		return
+	}
 	// Misses only come from visible mechanics (design/mechanics.md, No random misses).
 	if a.Special != Overwhelm {
 		if target.evadeNext {
@@ -542,6 +577,11 @@ func (b *Battle) applySelf(user *Combatant, a *Ability) {
 	case HolySeal:
 		user.sealed = a.Duration
 		b.emitCue(CueStatUp, "%s attacks are blessed with holy light.", user.Possessive())
+	case IceBlock:
+		user.iceBlock = a.Duration
+		b.emitCue(CueStatUp, "%s encased in a block of ice!", user.Be())
+	case CancelIceBlock:
+		b.breakIce(user)
 	case BearForm:
 		user.bear = true
 		b.emitCue(CueStatUp, "%s into a bear!", user.Verb("turn"))
@@ -560,6 +600,28 @@ func (b *Battle) applySelf(user *Combatant, a *Ability) {
 	}
 }
 
+// CancelIceBlock ends the player's Ice Block before the round's move is chosen; it takes no
+// turn. It returns the events.
+func (b *Battle) CancelIceBlock() []Event {
+	b.events = nil
+	if b.Player.iceBlock > 0 {
+		b.breakIce(b.Player)
+	}
+	return b.events
+}
+
+func (b *Battle) breakIce(c *Combatant) {
+	c.iceBlock = 0
+	b.emit("%s out of the ice block.", c.Verb("break"))
+}
+
+// gainRage gives a warrior rage for taking damage.
+func gainRage(c *Combatant, n int) {
+	if c.Resource == Rage && c.Alive() {
+		c.MP = min(c.Base.MaxMP, c.MP+n)
+	}
+}
+
 // heal restores a share of max HP.
 func (b *Battle) heal(c *Combatant, share float64) {
 	n := min(max(1, int(float64(c.Base.MaxHP)*share)), c.Base.MaxHP-c.HP)
@@ -575,6 +637,9 @@ func (b *Battle) sealBurn(user, target *Combatant) {
 	}
 	dmg := b.absorb(target, b.Damage(user, target, seal, false, 0.85+0.15*b.rng.Float64()))
 	cheated := b.attackDamage(target, dmg)
+	if dmg > 0 {
+		gainRage(target, rageOnHit)
+	}
 	b.emitHit(target, CueHit, "The seal burns %s for %d.", target.Object(), dmg)
 	if cheated {
 		b.cheatDeath(target)
@@ -629,7 +694,8 @@ func (b *Battle) Damage(user, target *Combatant, a *Ability, crit bool, roll flo
 		atk, def = user.stat(Magic), target.stat(Resistance)
 	}
 	base := ((2*float64(user.Level)/5+2)*float64(a.Power)*atk/math.Max(def, 1))/50 + 2
-	m := damageScale * Effectiveness(a.Element, target.Types)
+	el := element(a, target)
+	m := damageScale * Effectiveness(el, target.Types)
 	if m == 0 {
 		return 0
 	}
@@ -638,7 +704,7 @@ func (b *Battle) Damage(user, target *Combatant, a *Ability, crit bool, roll flo
 		affinity = user.Types
 	}
 	for _, t := range affinity {
-		if t == a.Element {
+		if t == el {
 			m *= affinityBonus
 			break
 		}
@@ -648,9 +714,6 @@ func (b *Battle) Damage(user, target *Combatant, a *Ability, crit bool, roll flo
 	}
 	if user.enraged > 0 {
 		m *= enrageBonus
-	}
-	if user.status[Burn] > 0 && (a.Category == PhysicalCat || user.bear) {
-		m *= 0.5
 	}
 	return max(1, int(base*m*roll))
 }
@@ -668,8 +731,20 @@ func critChance(user, target *Combatant, a *Ability) float64 {
 	return min(1, chance)
 }
 
+// element is the element an ability strikes a target with: its own, or one of its Alt
+// elements if that is more effective (Frostfire Bolt).
+func element(a *Ability, target *Combatant) Element {
+	best := a.Element
+	for _, e := range a.Alt {
+		if Effectiveness(e, target.Types) > Effectiveness(best, target.Types) {
+			best = e
+		}
+	}
+	return best
+}
+
 func (b *Battle) hit(user, target *Combatant, a *Ability) {
-	eff := Effectiveness(a.Element, target.Types)
+	eff := Effectiveness(element(a, target), target.Types)
 	if eff == 0 {
 		b.emitCue(CueNoEffect, "It had no effect on %s.", target.Object())
 		return
@@ -680,6 +755,12 @@ func (b *Battle) hit(user, target *Combatant, a *Ability) {
 	cue := CueHit
 	if crit {
 		cue = CueCrit
+	}
+	switch {
+	case crit:
+		gainRage(target, rageOnCrit)
+	case dmg > 0:
+		gainRage(target, rageOnHit)
 	}
 	switch {
 	case crit && eff > 1:
@@ -723,6 +804,7 @@ func (b *Battle) hit(user, target *Combatant, a *Ability) {
 func (b *Battle) thorns(user, target *Combatant) {
 	dmg := max(1, target.Base.MaxHP/thornsShare)
 	cheated := b.attackDamage(user, dmg)
+	gainRage(user, rageOnHit)
 	b.emitHit(user, CueHit, "Thorns prick %s for %d.", user.Object(), dmg)
 	if cheated {
 		b.cheatDeath(user)
@@ -766,7 +848,7 @@ func (b *Battle) durationFor(in Inflict) int {
 		return in.Duration + b.rng.IntN(in.MaxDuration-in.Duration+1)
 	case in.Duration > 0:
 		return in.Duration
-	case in.Status == Drain:
+	case in.Status == Drain || in.Status == Leech:
 		return drainRounds
 	case in.Status.dot():
 		return dotRounds
@@ -784,7 +866,7 @@ func statusVerb(k StatusKind) string {
 		return "bleeding"
 	case Freeze:
 		return "frozen"
-	case Drain:
+	case Drain, Leech:
 		return "being drained"
 	case Wither:
 		return "withering"
@@ -796,6 +878,8 @@ func statusVerb(k StatusKind) string {
 		return "silenced"
 	case Swarm:
 		return "swarmed by insects"
+	case Ignite:
+		return "set on fire"
 	default:
 		return "stunned"
 	}
@@ -820,7 +904,7 @@ func (b *Battle) endOfRound() {
 				dmg = min(dmg, c.HP)
 				c.HP -= dmg
 				b.emitHit(c, CueHit, "%s hurt by %s for %d damage.", c.Be(), statusNoun(k), dmg)
-				if foe := b.foe(c); k == Drain && foe.Alive() && foe.HP < foe.Base.MaxHP {
+				if foe := b.foe(c); (k == Drain || k == Leech) && foe.Alive() && foe.HP < foe.Base.MaxHP {
 					n := min(dmg, foe.Base.MaxHP-foe.HP)
 					foe.HP += n
 					b.emitCue(CueHeal, "%s %d HP.", foe.Verb("drain"), n)
@@ -841,7 +925,7 @@ func (b *Battle) endOfRound() {
 			}
 		}
 		if slices.Contains(c.totems, HealingTotem) && c.Alive() {
-			if heal := min(max(1, c.Base.MaxHP/16), c.Base.MaxHP-c.HP); heal > 0 {
+			if heal := min(max(1, c.Base.MaxHP/healingTotemShare), c.Base.MaxHP-c.HP); heal > 0 {
 				c.HP += heal
 				b.emitCue(CueHeal, "The Healing Stream Totem restores %d HP.", heal)
 			}
@@ -861,6 +945,14 @@ func (b *Battle) endOfRound() {
 		if c.smoke > 0 {
 			c.smoke--
 		}
+		if c.iceBlock > 0 && c.Alive() {
+			if c.iceBlock--; c.iceBlock == 0 {
+				b.emit("%s ice block melts.", c.Possessive())
+			}
+		}
+		if c.Resource == Energy && c.Alive() {
+			c.MP = min(c.Base.MaxMP, c.MP+energyPerRound)
+		}
 		if c.sealed > 0 {
 			c.sealed--
 		}
@@ -873,7 +965,7 @@ func statusNoun(k StatusKind) string {
 		return "the burn"
 	case Poison:
 		return "poison"
-	case Drain:
+	case Drain, Leech:
 		return "the drain"
 	case Wither:
 		return "withering"
@@ -881,6 +973,8 @@ func statusNoun(k StatusKind) string {
 		return "pain"
 	case Swarm:
 		return "the swarm"
+	case Ignite:
+		return "the flames"
 	default:
 		return "bleeding"
 	}

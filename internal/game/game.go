@@ -13,6 +13,7 @@ import (
 
 	"oldworld2/internal/assets"
 	"oldworld2/internal/audio"
+	"oldworld2/internal/battle"
 	"oldworld2/internal/character"
 	"oldworld2/internal/gfx"
 	"oldworld2/internal/procgen"
@@ -458,7 +459,11 @@ func (g *Game) drawHUD(dst *gfx.Image) {
 	g.font.Draw(dst, fmt.Sprintf("Lv%d %s", c.Level, c.Class.Info().Name), x+5, y+4, ink)
 	hpFrac := c.HP / float64(st.MaxHP)
 	bar(dst, x+5, y+14, w-10, hpFrac, hpColor(hpFrac))
-	bar(dst, x+5, y+21, w-10, c.MP/float64(max(1, st.MaxMP)), mpColor)
+	if r := c.Class.Info().Resource; r != battle.Mana {
+		bar(dst, x+5, y+21, w-10, float64(c.BattleStart())/character.ResourceMax, resourceColor(r))
+	} else {
+		bar(dst, x+5, y+21, w-10, c.MP/float64(max(1, st.MaxMP)), mpColor)
+	}
 	bar(dst, x+5, y+28, w-10, float64(c.XP)/float64(character.XPToNext(c.Level)), xpColor)
 	money := formatMoney(c.Money)
 	g.font.Draw(dst, money, x+w-6-g.font.Width(money), y+35, ink)

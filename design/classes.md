@@ -13,7 +13,7 @@ The main character and NPCs have classes, inspired by World of Warcraft (classic
 | Warrior | Physical | High HP, Attack, Defense | 2× passive HP regeneration on the map | **Heavy Strike** (Physical, melee), **Battle Cry** (self: Attack up), **Punch** (Physical, melee; fallback attack) |
 | Rogue | Physical, Dark | High Speed and crit chance, poisons, disables | | **Quick Stab** (Physical, melee, high crit, priority +1), **Smoke Veil** (self: Smoke for 2 turns, enemy can't use ranged attacks or targeted spells on you), **Jab** (fallback) |
 | Hunter | Physical, Nature | Attack and Speed, ranged, traps | | **Steady Shot** (Physical, ranged), **Venom Arrow** (Nature, ranged, Poison), **Kick** (Physical, melee; fallback, so Smoke doesn't leave only Wait) |
-| Mage | Ice, Water, Fire | Highest Magic, low HP and Defense, tricky defenses | 1.5× MP | **Ice Bolt** (Ice, targeted spell, Speed down chance), **Fire Bolt** (Fire, targeted spell; fallback attack, see below) |
+| Mage | Ice, Water, Fire | Highest Magic, low HP and Defense, tricky defenses | 1.5× MP | **Ice Bolt** (Ice, targeted spell, Speed down), **Fire Bolt** (Fire, targeted spell; fallback attack, see below) |
 | Warlock | Dark | Magic, highest damage over time, HP drain | | **Drain Life** (Dark, targeted spell, Drain: 1/8 max HP per round and heals the Warlock for the same), **Wither** (Dark, targeted spell, 1/16 max HP per round), **Hex Bolt** (Dark, targeted spell; fallback) |
 | Priest | Holy | Magic and Resistance, healing | | **Smite** (Holy, targeted spell), **Mend** (self heal), **Light Spark** (Holy, targeted spell; fallback) |
 | Paladin | Physical, Holy | Highest Defense, self-heals, lower damage to make up for it | Higher Defense, lower Attack/Magic (see Base Stats) | **Righteous Strike** (Holy, melee), **Holy Seal** (self: physical hits deal extra Holy damage), **Hammer Blow** (Physical, melee; fallback) |
@@ -32,7 +32,7 @@ First proposal, to be tuned by playtesting. Level 1 values:
 | Warlock | 95 | 150 | 4 | 14 | 8 | 11 | 10 |
 | Priest | 95 | 150 | 4 | 13 | 8 | 13 | 10 |
 | Paladin | 115 | 150 | 11 | 8 | 15 | 11 | 10 |
-| Shaman | 105 | 150 | 11 | 11 | 11 | 10 | 10 |
+| Shaman | 105 | 150 | 9 | 9 | 9 | 10 | 10 |
 | Druid | 100 | 150 | 9 | 13 | 10 | 11 | 10 |
 
 - **Growth per level:** `HP × (1 + 0.09 × (Level − 1))`, every other stat except MP `× (1 + 0.1 × (Level − 1))`. All classes grow at the same rate, so the ratios (and the Rogue's Speed lead) stay the same. MP doesn't grow
@@ -42,35 +42,46 @@ First proposal, to be tuned by playtesting. Level 1 values:
 ### 1.2 Ability Numbers
 Starting and level-up abilities of every class (the level is when it's learned; Start = at level 1). Power is used in the damage formula ([mechanics.md](mechanics.md#5-damage-formula)). Trainer and tome abilities (section 4) aren't in the game yet. First proposal, to be tuned by playtesting.
 
-| Class | Ability | Level | Power | MP | Notes |
+**Resources.** Most classes pay for abilities with MP, which carries over between battles. Two don't:
+
+- **Warrior: rage** (red bar, 0–100). Every battle starts at 0 rage. Charge generates 15 and Punch 10; taking damage generates 5, a critical hit 15
+- **Rogue: energy** (yellow bar, 0–100). Every battle starts at 100 energy, and 10 comes back at the end of every round
+
+Their MP stat is unused; the table below gives their costs in rage or energy.
+
+| Class | Ability | Level | Power | Cost | Notes |
 |-------|---------|------:|------:|---:|-------|
-| Warrior | Heavy Strike | Start | 50 | 20 | Main attack |
-| Warrior | Punch | Start | 30 | 0 | Basic move (fallback attack): free and always available |
-| Warrior | Battle Cry | Start | — | 20 | Attack +1 stage |
-| Warrior | Overwhelm | 2 | 100 | 25 | Only after a dodge or miss; can't be dodged |
+| Warrior | Heavy Strike | Start | 50 | 15 rage | Main attack |
+| Warrior | Punch | Start | 30 | 0 | Basic move (fallback attack): free and always available; generates 10 rage |
+| Warrior | Battle Cry | Start | — | 20 rage | Attack +1 stage |
+| Warrior | Overwhelm | 2 | 100 | 0 | Only after a dodge or miss; can't be dodged |
 | Warrior | Enrage | 3 | — | — | Passive; always on critical hits taken |
-| Warrior | Charge | 6 | 50 | 0 | Priority +1, first round only, once per battle, stuns for that round |
+| Warrior | Charge | 6 | 50 | 0 | Priority +1, first round only, once per battle, stuns for that round; generates 15 rage |
 | Warrior | Second Wind | 8 | — | — | Passive: 30% (crit: 100%) to start Regen when taking a hit: 1/16 HP at the end of each of the next 3 rounds; a new trigger restarts it |
-| Warrior | Rend | 10 | 20 | 20 | Bleed 1/16 for 10 rounds |
-| Mage | Ice Bolt | Start | 55 | 25 | 30% chance: Speed −1 stage |
+| Warrior | Rend | 10 | 20 | 20 rage | Bleed 1/16 for 10 rounds |
+| Mage | Ice Bolt | Start | 55 | 25 | Speed −1 stage |
 | Mage | Fire Bolt | Start | 40 | 0 | Fallback attack |
 | Mage | Frost Ring | 2 | 45 | 30 | Area spell, 20% chance to Freeze 1 round |
 | Mage | Mana Shield | 3 | — | 30 | 5 rounds, priority +2 |
-| Mage | Blink | 6 | — | 20 | Evade the next attack |
-| Mage | Tidal Splash | 8 | 50 | 25 | Water, targeted spell |
-| Rogue | Quick Stab | Start | 45 | 20 | Priority +1, 25% crit chance |
-| Rogue | Smoke Veil | Start | — | 20 | Smoke for 2 rounds |
+| Mage | Ignite | 4 | — | 20 | Fire, targeted spell: Ignite, 1/16 max HP per round for 8 rounds |
+| Mage | Tidal Splash | 5 | 50 | 25 | Water, targeted spell |
+| Mage | Blink | 6 | — | 20 | Priority +2; evade the next attack |
+| Mage | Arcane Explosion | 7 | 60 | 30 | Arcane, area spell: neutral to every type (no affinity bonus), gets through Smoke; the answer to enemies that resist all of Ice, Water and Fire, like the Corsair |
+| Mage | Frostfire Bolt | 8 | 55 | 25 | Ice or Fire, whichever is more effective against the target (with the mage's affinity bonus either way); Speed −1 stage. Replaces Ice Bolt in the bot's loadout |
+| Mage | Ice Block | 10 | — | 25 | Priority +1; the mage is immune to attacks this round and the next, and can only wait. Its menu slot turns into **Cancel**, which breaks the ice without using the turn (the mage then chooses the round's move) |
+| Rogue | Quick Stab | Start | 45 | 40 energy | Priority +1, 25% crit chance |
+| Rogue | Smoke Veil | Start | — | 20 energy | Smoke for 2 rounds |
 | Rogue | Jab | Start | 30 | 0 | Fallback attack |
-| Rogue | Knife Throw | 2 | 45 | 20 | Physical, ranged |
-| Rogue | Poisoned Blade | 3 | 20 | 20 | Nature, melee, Poison |
-| Rogue | Cheap Shot | 6 | 10 | 25 | Stuns for 2 rounds, once per battle |
+| Rogue | Knife Throw | 2 | 45 | 20 energy | Physical, ranged |
+| Rogue | Poisoned Blade | 3 | 20 | 30 energy | Nature, melee, Poison |
+| Rogue | Cheap Shot | 6 | 10 | 25 energy | Stuns for 2 rounds, once per battle |
 | Rogue | Improved Sprint | 6 | — | — | Passive, on the map: sprinting uses up stamina at only 20% of the normal rate (learned along with Cheap Shot) |
 | Rogue | Cheat Death | 8 | — | — | Passive: once per battle, an attack that would kill the rogue leaves it at 10% HP instead (damage over time can still kill; learned along with Gut Slash) |
 | Rogue | Prey on the Weak | 8 | — | — | Passive: +10% critical hit chance (on top of the base 6.25%) for each level the rogue is above the enemy, up to 100%; no penalty against higher-level enemies |
 | Rogue | Poison Resistance | 10 | — | — | Passive: poison does 75% less damage to the rogue (its damage per round, at least 1); other damage over time is unchanged |
 | Shaman | Magic Wrath Totem | 4 | — | — | Passive: at the start of every battle the shaman puts down a totem that raises Magic by 1 stage for the battle (learned along with Stone Shock) |
-| Shaman | Healing Stream Totem | 4 | — | — | Passive: at the start of every battle the shaman also puts down a totem that heals 1/16 of max HP at the end of every round. Both totems are announced in one message |
-| Rogue | Gut Slash | 8 | 75 | 30 | High power |
+| Shaman | Healing Stream Totem | 4 | — | — | Passive: at the start of every battle the shaman also puts down a totem that heals 1/32 of max HP at the end of every round. Both totems are announced in one message |
+| Rogue | Gut Slash | 8 | 75 | 30 energy | High power |
 | Hunter | Steady Shot | Start | 50 | 20 | Physical, ranged |
 | Hunter | Venom Arrow | Start | 25 | 20 | Nature, ranged, Poison |
 | Hunter | Kick | Start | 30 | 0 | Fallback attack (melee, so Smoke can't stop it) |
@@ -100,10 +111,10 @@ Starting and level-up abilities of every class (the level is when it's learned; 
 | Paladin | Devotion | 4 | — | 20 | Defense +1 stage |
 | Paladin | Healing Light | 6 | — | 30 | Heal 30% of max HP |
 | Shaman | Storm Bolt | Start | 50 | 20 | Air, targeted spell |
-| Shaman | Flame Shock | Start | 25 | 20 | Fire, targeted spell, Burn |
+| Shaman | Flame Shock | Start | 25 | 20 | Fire, targeted spell; Burn: 1/16 max HP per round (10 rounds) |
 | Shaman | Zap | Start | 40 | 0 | Fallback attack |
 | Shaman | Chain Lightning | 2 | 45 | 30 | Air, area spell (early, against Smoke) |
-| Shaman | Healing Wave | 3 | — | 30 | Heal 30% of max HP |
+| Shaman | Healing Wave | 3 | — | 30 | Heal 20% of max HP |
 | Shaman | Stone Shock | 4 | 40 | 25 | Nature; 30% chance to Silence for 2 rounds |
 | Shaman | Frost Shock | 6 | 45 | 25 | Ice; target's Speed −1 stage |
 | Druid | Thorn Lash | Start | 50 | 20 | Nature, targeted spell |
@@ -167,7 +178,7 @@ Level-up abilities come automatically, trainer abilities cost money, tome abilit
 ### Mage
 | Source | Abilities |
 |--------|-----------|
-| Level-up | **Frost Ring** at level 2 (Ice, area spell, Freeze chance; early so Smoke can't shut the Mage down), **Mana Shield** at level 3 (priority +2: 50% of damage taken is taken from MP instead of HP), **Blink** at level 6 (evade the opponent's next attack), **Tidal Splash** at level 8 (Water, targeted spell) |
+| Level-up | **Frost Ring** at level 2 (Ice, area spell, Freeze chance; early so Smoke can't shut the Mage down), **Mana Shield** at level 3 (priority +2: 50% of damage taken is taken from MP instead of HP), **Ignite** at level 4 (Fire damage over time), **Tidal Splash** at level 5 (Water, targeted spell), **Blink** at level 6 (priority +2: evade the opponent's next attack), **Arcane Explosion** at level 7 (Arcane area spell, neutral to every type), **Frostfire Bolt** at level 8 (Ice or Fire, whichever hurts more), **Ice Block** at level 10 (immune to attacks for 2 rounds) |
 | Trainer | **Time Warp** (+1 Speed stage at the start of each of the next 3 rounds; using Blink during that time still gains the stack, so Time Warp → Blink is a free Speed stage), Flame Burst (Fire, high power), Hailstorm (Ice, area spell, multi-hit), Mutate (turns the enemy into a harmless critter for 2 turns) |
 | Tome | Meteor (Fire, very high power, charges for 1 turn) |
 

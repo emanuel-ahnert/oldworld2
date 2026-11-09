@@ -227,3 +227,71 @@ func TestXPFallsOffForWeakEnemies(t *testing.T) {
 		}
 	}
 }
+
+// Warriors start battles without rage and rogues with full energy; neither changes the
+// MP kept on the map.
+func TestBattleResources(t *testing.T) {
+	w, r, m := New(Warrior), New(Rogue), New(Mage)
+	if c := w.Combatant(); c.Resource != battle.Rage || c.MP != 0 || c.Base.MaxMP != 100 {
+		t.Fatalf("warrior: %v %d/%d", c.Resource, c.MP, c.Base.MaxMP)
+	}
+	if c := r.Combatant(); c.Resource != battle.Energy || c.MP != 100 || c.Base.MaxMP != 100 {
+		t.Fatalf("rogue: %v %d/%d", c.Resource, c.MP, c.Base.MaxMP)
+	}
+	if c := m.Combatant(); c.Resource != battle.Mana || c.MP != int(m.MP) {
+		t.Fatalf("mage: %v %d", c.Resource, c.MP)
+	}
+}
+
+// The bot's mage keeps Blink and Tidal Splash slotted: Ice, Water and Fire (its free Fire
+// Bolt) plus an opener.
+func TestMageBotLoadout(t *testing.T) {
+	c := New(Mage)
+	for c.Level < 6 {
+		c.GainXP(XPToNext(c.Level))
+	}
+	c.EquipBotMoves()
+	for _, id := range []string{"ice_bolt", "blink", "tidal_splash"} {
+		if !slices.Contains(c.Active, id) {
+			t.Fatalf("slots %q lack %s", c.Active, id)
+		}
+	}
+}
+
+// Loading a save made before an ability moved to an earlier level teaches it.
+func TestCatchUp(t *testing.T) {
+	c := New(Mage)
+	c.Level = 6
+	c.CatchUp()
+	for _, id := range []string{"frost_ring", "mana_shield", "ignite", "tidal_splash", "blink"} {
+		if !slices.Contains(c.Known, id) {
+			t.Fatalf("known %q lack %s", c.Known, id)
+		}
+	}
+}
+
+// From level 7 the bot's mage swaps Frost Ring for Arcane Explosion.
+func TestMageBotLoadoutArcane(t *testing.T) {
+	c := New(Mage)
+	for c.Level < 7 {
+		c.GainXP(XPToNext(c.Level))
+	}
+	c.EquipBotMoves()
+	got, want := slices.Sorted(slices.Values(c.Active)), []string{"arcane_explosion", "blink", "ice_bolt", "tidal_splash"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("slots %q, want %q", c.Active, want)
+	}
+}
+
+// From level 8 Frostfire Bolt takes Ice Bolt's slot.
+func TestMageBotLoadoutFrostfire(t *testing.T) {
+	c := New(Mage)
+	for c.Level < 8 {
+		c.GainXP(XPToNext(c.Level))
+	}
+	c.EquipBotMoves()
+	got, want := slices.Sorted(slices.Values(c.Active)), []string{"arcane_explosion", "blink", "frostfire_bolt", "tidal_splash"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("slots %q, want %q", c.Active, want)
+	}
+}

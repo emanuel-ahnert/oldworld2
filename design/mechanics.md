@@ -91,7 +91,7 @@ Damage = max(1, floor(3 × Base × Affinity × Element × Crit × Random × Othe
 | Element | Product of the chart multipliers against each of the defender's types (see [Elements & Types](#6-elements--types)) |
 | Crit | 1.5 on a critical hit, otherwise 1.0. Base crit chance 6.25% (1/16) |
 | Random | Uniform roll between 0.85 and 1.00 |
-| Other | Enrage (+40%), Burn (halves physical damage dealt), Mana Shield, equipment modifiers, etc. |
+| Other | Enrage (+40%), Mana Shield, equipment modifiers, etc. |
 
 - Every damaging ability has a **category** (physical or magical) that picks the stat pair, and an **element** that picks the chart row. A "Flame Blade" can be a physical Fire ability; a "Fireball" is a magical Fire ability. The Physical element is always the physical category
 - An Element multiplier of 0 means immune: the attack deals 0 damage (the `max(1, …)` floor does not apply) and the battle log shows "It had no effect"
@@ -122,7 +122,7 @@ Rows = attacking element, columns = defender's type. Empty cell = 1×.
 | **Holy**               |          |      |       |     |        |     | ½    | 2    |
 | **Dark**               |          |      |       |     |        |     | 2    | ½    |
 
-Flavor: fire melts ice and burns the undead; water douses fire and floods the land; ice freezes the ground and grounds flyers; nature smothers fire and cracks ice with roots and stone, but can't reach the sky; lightning conducts through water; Holy and Dark are mutually destructive; Physical is plain force and neutral to everything.
+Flavor: fire melts ice and burns the undead; water douses fire and floods the land; ice freezes the ground and grounds flyers; nature smothers fire and cracks ice with roots and stone, but can't reach the sky; lightning conducts through water; Holy and Dark are mutually destructive; Physical is plain force and neutral to everything. **Arcane** (the mage's Arcane Explosion) is raw magic: also neutral to everything, and no creature has the Arcane type, so it is left out of the chart.
 
 ### 6.2 Weaknesses & Resistances per Type
 | Type | Weak to (2×) | Resists (½×) | Immune to (0×) | Notes |
@@ -145,7 +145,7 @@ Pokemon style: damage and healing over time are a **fraction of the target's max
 | Effect | What it does | Broken by damage |
 |--------|--------------|:----------------:|
 | Drain | Deals **1/8** max HP per round and heals the caster for the same amount (Drain Life). The strongest damage over time in the game; the Warlock's signature | — |
-| Burn | 1/16 max HP per round; also halves physical damage dealt | — |
+| Burn | 1/16 max HP per round | — |
 | Poison | 1/16 max HP per round | — |
 | Bleed | 1/16 max HP per round (e.g. Rend) | — |
 | Other DoTs | 1/16 max HP per round unless the ability says otherwise (Wither, Mind Pain, Consecration, Insect Swarm) | — |

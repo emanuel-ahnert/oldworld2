@@ -187,15 +187,13 @@ func (m *abilitiesMenu) draw(dst *gfx.Image) {
 	if a := battle.Get(id); a != nil {
 		var head string
 		if a.Power > 0 {
-			head = fmt.Sprintf("%s  Power %d  ", a.Element, a.Power)
+			head = fmt.Sprintf("%s  Power %d  ", a.Elements(), a.Power)
 		}
 		switch {
 		case a.Passive:
 			head += "Passive: always on"
-		case a.Cost > 0:
-			head += fmt.Sprintf("%d MP", a.Cost)
 		default:
-			head += "Free"
+			head += costText(a, c.Class.Info().Resource)
 		}
 		if a.Priority > 0 {
 			head += fmt.Sprintf("  Priority +%d", a.Priority)

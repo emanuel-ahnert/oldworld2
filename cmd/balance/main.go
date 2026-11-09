@@ -53,6 +53,7 @@ func main() {
 				for ch.Level < *level {
 					ch.GainXP(character.XPToNext(ch.Level))
 				}
+				ch.EquipBotMoves() // the loadout the demo bot plays with
 				ch.Heal()
 				var c cell
 				for i := range *n {

@@ -35,6 +35,9 @@ func (c *Combatant) clone() *Combatant {
 
 // usableMoves lists the moves a combatant can choose now; Wait only when nothing else is.
 func (b *Battle) usableMoves(user *Combatant) []string {
+	if user.iceBlock > 0 {
+		return []string{WaitID} // the bot sits its Ice Block out
+	}
 	var out []string
 	for _, id := range b.MenuOptions(user) {
 		if ok, _ := b.Usable(user, id); ok && id != WaitID {
@@ -81,7 +84,11 @@ func (b *Battle) playout(first string, seed uint64) float64 {
 	}
 	p, e := c.Player, c.Enemy
 	if c.Won() {
-		return 1 + 0.4*float64(p.HP)/float64(p.Base.MaxHP) + 0.1*float64(p.MP)/float64(max(1, p.Base.MaxMP))
+		mp := 0.0 // only mana carries over; rage and energy reset every battle
+		if p.Resource == Mana {
+			mp = float64(p.MP) / float64(max(1, p.Base.MaxMP))
+		}
+		return 1 + 0.4*float64(p.HP)/float64(p.Base.MaxHP) + 0.1*mp
 	}
 	return 0.5 * (1 - float64(max(0, e.HP))/float64(e.Base.MaxHP))
 }

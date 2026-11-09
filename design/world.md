@@ -253,7 +253,7 @@ Level 1 values; they grow per level the same way as player stats ([classes.md](c
 | Bat Swarm | Bat Bites (Physical, Power 35, 20% crit), Screech (enemy Attack −1 stage); flies |
 | Dire Wolf | Savage Bite (Physical, Power 45, 25% Bleed), Dark Howl (Attack +1 stage) |
 | Cultist | Shadow Bolt (Dark spell, Power 50), Fire Brand (Fire melee, Power 35, 30% Burn), Dark Pact (Attack and Magic +1 stage) |
-| Vampire | Life Drain (Dark spell, Power 30, Drain), Vampire Claw (Physical, Power 55), Mesmerize (Dread for 2 rounds, once per battle); alone |
+| Vampire | Life Drain (Dark spell, Power 30, Drain at half strength: 1/16 max HP per round), Vampire Claw (Physical, Power 55), Mesmerize (Dread for 2 rounds, once per battle); alone |
 
 ### 3.2 Enemy-Only Classes
 Extra classes that are not playable. They have their own ability pools, often mixed from player classes.

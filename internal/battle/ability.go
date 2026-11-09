@@ -40,23 +40,25 @@ func (s Stat) String() string { return statNames[s] }
 type Special int
 
 const (
-	NoSpecial    Special = iota
-	Overwhelm            // usable only right after the user missed or was dodged; can't be dodged
-	ManaShield           // half of the damage taken comes out of MP
-	Blink                // the next attack against the user misses
-	Smoke                // ranged attacks and targeted spells can't target the user
-	Enrage               // passive: taking damage may enrage (+40% damage), always on critical hits
-	SecondWind           // passive: taking a hit may start Regen (30%, always on critical hits)
-	Shield               // absorbs damage up to a share of max HP
-	HolySeal             // physical hits deal extra Holy damage
-	BearForm             // rest of the battle: Defense up, attacks are melee and hit Defense
-	DemonArmor           // passive: heals 1/16 max HP every round
-	CheatDeath           // passive: once per battle, an attack that would defeat the user leaves it at 10% HP
-	WrathTotem           // passive: puts down a totem at the start of a battle, Magic +1 stage
-	HealingTotem         // passive: puts down a totem at the start of a battle that heals 1/16 max HP every round
-	PreyOnWeak           // passive: +10% crit chance for each level the user is above the target
-	PoisonResist         // passive: poison does 75% less damage
-	Thorns               // passive: melee attackers that hit the user take 1/16 of its max HP
+	NoSpecial      Special = iota
+	Overwhelm              // usable only right after the user missed or was dodged; can't be dodged
+	ManaShield             // half of the damage taken comes out of MP
+	Blink                  // the next attack against the user misses
+	Smoke                  // ranged attacks and targeted spells can't target the user
+	Enrage                 // passive: taking damage may enrage (+40% damage), always on critical hits
+	SecondWind             // passive: taking a hit may start Regen (30%, always on critical hits)
+	Shield                 // absorbs damage up to a share of max HP
+	HolySeal               // physical hits deal extra Holy damage
+	BearForm               // rest of the battle: Defense up, attacks are melee and hit Defense
+	DemonArmor             // passive: heals 1/16 max HP every round
+	CheatDeath             // passive: once per battle, an attack that would defeat the user leaves it at 10% HP
+	WrathTotem             // passive: puts down a totem at the start of a battle, Magic +1 stage
+	HealingTotem           // passive: puts down a totem at the start of a battle that heals 1/16 max HP every round
+	PreyOnWeak             // passive: +10% crit chance for each level the user is above the target
+	PoisonResist           // passive: poison does 75% less damage
+	Thorns                 // passive: melee attackers that hit the user take 1/16 of its max HP
+	IceBlock               // the user is immune to attacks for a few rounds and can only wait
+	CancelIceBlock         // ends the user's Ice Block
 )
 
 // StatChange raises or lowers a stat of the user or the target.
@@ -80,10 +82,12 @@ type Ability struct {
 	ID       string
 	Name     string
 	Element  Element
+	Alt      []Element // other elements it can strike with: the most effective one applies
 	Category Category
 	Delivery Delivery
 	Power    int
-	Cost     int
+	Cost     int     // MP, rage or energy, whichever the user has
+	Gain     int     // resource gained by using it (the warrior's rage)
 	Priority int     // higher goes first, regardless of Speed (like Pokemon move priority)
 	CritRate float64 // 0 uses the base rate
 	Passive  bool    // always on, never selected in battle
@@ -101,8 +105,20 @@ type Ability struct {
 	Text     string // short description for menus
 }
 
+// Elements names the ability's element for menus, e.g. "Ice/Fire" for Frostfire Bolt.
+func (a *Ability) Elements() string {
+	s := a.Element.String()
+	for _, e := range a.Alt {
+		s += "/" + e.String()
+	}
+	return s
+}
+
 // WaitID is the "do nothing" move everyone has.
 const WaitID = "wait"
+
+// CancelIceBlockID is the move that takes Ice Block's place in the menu while it is up.
+const CancelIceBlockID = "cancel_ice_block"
 
 var abilities = map[string]*Ability{}
 
@@ -121,20 +137,20 @@ func init() {
 		Ability{ID: WaitID, Name: "Wait", Category: StatusCat, Delivery: Self, Text: "Do nothing this turn"},
 
 		// Warrior (design/classes.md, numbers in 1.2).
-		Ability{ID: "heavy_strike", Name: "Heavy Strike", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 50, Cost: 20,
+		Ability{ID: "heavy_strike", Name: "Heavy Strike", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 50, Cost: 15,
 			Text: "A strong melee strike"},
-		Ability{ID: "punch", Name: "Punch", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 30, Fallback: true,
-			Text: "A free attack, always ready"},
+		Ability{ID: "punch", Name: "Punch", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 30, Fallback: true, Gain: 10,
+			Text: "A free attack that builds rage"},
 		Ability{ID: "battle_cry", Name: "Battle Cry", Category: StatusCat, Delivery: Self, Cost: 20,
 			Stats: []StatChange{{Stat: Attack, Stages: 1, OnSelf: true}}, Text: "Attack up"},
 		Ability{ID: "enrage", Name: "Enrage", Passive: true, Special: Enrage,
 			Text: "Passive: taking damage may enrage you (+40% damage); critical hits always do"},
 		Ability{ID: "charge", Name: "Charge", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 50, Priority: 1,
-			Uses: 1, Opener: true, Inflict: []Inflict{{Status: Stun, Duration: 1}},
+			Uses: 1, Opener: true, Gain: 15, Inflict: []Inflict{{Status: Stun, Duration: 1}},
 			Text: "First round only, once: stuns the target for this round"},
 		Ability{ID: "second_wind", Name: "Second Wind", Passive: true, Special: SecondWind,
 			Text: "Passive: hits may start Regen, 1/16 HP for 3 rounds (30%); critical hits always do"},
-		Ability{ID: "overwhelm", Name: "Overwhelm", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 100, Cost: 25,
+		Ability{ID: "overwhelm", Name: "Overwhelm", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 100,
 			Special: Overwhelm, Text: "Only after a miss or dodge; can't be dodged"},
 		Ability{ID: "rend", Name: "Rend", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 20, Cost: 20,
 			Inflict: []Inflict{{Status: Bleed}}, Text: "Bleed: 1/16 HP per round"},
@@ -143,30 +159,41 @@ func init() {
 		Ability{ID: "fire_bolt", Name: "Fire Bolt", Element: Fire, Category: MagicalCat, Delivery: TargetedSpell, Power: 40, Fallback: true,
 			Text: "A free attack, always ready"},
 		Ability{ID: "ice_bolt", Name: "Ice Bolt", Element: Ice, Category: MagicalCat, Delivery: TargetedSpell, Power: 55, Cost: 25,
-			Stats: []StatChange{{Stat: Speed, Stages: -1, Chance: 0.3}}, Text: "30%: Speed down"},
+			Stats: []StatChange{{Stat: Speed, Stages: -1}}, Text: "Target's Speed down"},
 		Ability{ID: "tidal_splash", Name: "Tidal Splash", Element: Water, Category: MagicalCat, Delivery: TargetedSpell, Power: 50, Cost: 25,
 			Text: "A wave of water"},
 		Ability{ID: "mana_shield", Name: "Mana Shield", Category: StatusCat, Delivery: Self, Cost: 30, Special: ManaShield, Duration: 5, Priority: 2,
 			Text: "Half of the damage taken drains MP instead"},
-		Ability{ID: "blink", Name: "Blink", Category: StatusCat, Delivery: Self, Cost: 20, Special: Blink, Text: "Evade the next attack"},
+		Ability{ID: "frostfire_bolt", Name: "Frostfire Bolt", Element: Ice, Alt: []Element{Fire}, Category: MagicalCat, Delivery: TargetedSpell,
+			Power: 55, Cost: 25, Stats: []StatChange{{Stat: Speed, Stages: -1}}, Text: "Ice or Fire, whichever hurts the target more; Speed down"},
+		Ability{ID: "arcane_explosion", Name: "Arcane Explosion", Element: Arcane, Category: MagicalCat, Delivery: AreaSpell, Power: 60, Cost: 30,
+			Text: "Area spell: raw arcane power, neutral to every type (gets through smoke)"},
+		Ability{ID: "blink", Name: "Blink", Category: StatusCat, Delivery: Self, Cost: 20, Special: Blink, Priority: 2,
+			Text: "Evade the next attack"},
+		Ability{ID: "ignite", Name: "Ignite", Element: Fire, Category: StatusCat, Delivery: TargetedSpell, Cost: 20,
+			Inflict: []Inflict{{Status: Ignite, Duration: igniteRounds}}, Text: "Ignite: 1/16 HP fire damage per round, 8 rounds"},
+		Ability{ID: "ice_block", Name: "Ice Block", Category: StatusCat, Delivery: Self, Cost: 25, Special: IceBlock, Duration: 2, Priority: 1,
+			Text: "2 rounds: immune to attacks, but you can only wait or cancel it"},
+		Ability{ID: CancelIceBlockID, Name: "Cancel", Category: StatusCat, Delivery: Self, Special: CancelIceBlock,
+			Text: "Break out of the ice block, then choose this round's move"},
 		Ability{ID: "frost_ring", Name: "Frost Ring", Element: Ice, Category: MagicalCat, Delivery: AreaSpell, Power: 45, Cost: 30,
 			Inflict: []Inflict{{Status: Freeze, Chance: 0.2, Duration: 1}}, Text: "20%: Freeze"},
 
 		// Rogue. Quick Stab and Poisoned Blade also exist as free enemy moves (the bandit's).
 		Ability{ID: "rogue_quick_stab", Name: "Quick Stab", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 45,
-			CritRate: 0.25, Priority: 1, Cost: 20, Text: "Goes first; high critical rate"},
+			CritRate: 0.25, Priority: 1, Cost: 40, Text: "Goes first; high critical rate"},
 		Ability{ID: "rogue_smoke_veil", Name: "Smoke Veil", Category: StatusCat, Delivery: Self, Special: Smoke, Duration: 2, Cost: 20,
 			Text: "2 rounds: no ranged attacks or targeted spells on you"},
 		Ability{ID: "jab", Name: "Jab", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 30, Fallback: true,
 			Text: "A free attack, always ready"},
 		Ability{ID: "knife_throw", Name: "Knife Throw", Element: Physical, Category: PhysicalCat, Delivery: Ranged, Power: 45, Cost: 20,
 			Text: "A ranged attack"},
-		Ability{ID: "rogue_poisoned_blade", Name: "Poisoned Blade", Element: Nature, Category: PhysicalCat, Delivery: Melee, Power: 20, Cost: 20,
+		Ability{ID: "rogue_poisoned_blade", Name: "Poisoned Blade", Element: Nature, Category: PhysicalCat, Delivery: Melee, Power: 20, Cost: 30,
 			Inflict: []Inflict{{Status: Poison}}, Text: "Poison: 1/16 HP per round"},
 		Ability{ID: "wrath_totem", Name: "Magic Wrath Totem", Passive: true, Special: WrathTotem,
 			Text: "Passive: puts down a totem at the start of every battle that raises Magic by 1 stage"},
 		Ability{ID: "healing_stream_totem", Name: "Healing Stream Totem", Passive: true, Special: HealingTotem,
-			Text: "Passive: puts down a totem at the start of every battle that heals 1/16 HP per round"},
+			Text: "Passive: puts down a totem at the start of every battle that heals 1/32 HP per round"},
 		Ability{ID: "improved_sprint", Name: "Improved Sprint", Passive: true,
 			Text: "Passive, on the map: sprinting uses up endurance at only 20% of the normal rate"},
 		Ability{ID: "poison_resistance", Name: "Poison Resistance", Passive: true, Special: PoisonResist,
@@ -245,13 +272,13 @@ func init() {
 		Ability{ID: "storm_bolt", Name: "Storm Bolt", Element: Air, Category: MagicalCat, Delivery: TargetedSpell, Power: 50, Cost: 20,
 			Text: "A bolt of lightning"},
 		Ability{ID: "flame_shock", Name: "Flame Shock", Element: Fire, Category: MagicalCat, Delivery: TargetedSpell, Power: 25, Cost: 20,
-			Inflict: []Inflict{{Status: Burn}}, Text: "Burn: 1/16 HP per round, halves physical damage"},
+			Inflict: []Inflict{{Status: Burn}}, Text: "Burn: 1/16 HP per round"},
 		Ability{ID: "zap", Name: "Zap", Element: Air, Category: MagicalCat, Delivery: TargetedSpell, Power: 40, Fallback: true,
 			Text: "A free attack, always ready"},
 		Ability{ID: "chain_lightning", Name: "Chain Lightning", Element: Air, Category: MagicalCat, Delivery: AreaSpell, Power: 45, Cost: 30,
 			Text: "Area spell: forking lightning (gets through smoke)"},
-		Ability{ID: "healing_wave", Name: "Healing Wave", Element: Water, Category: StatusCat, Delivery: Self, Cost: 30, Heal: 0.3,
-			Text: "Heal 30% of max HP"},
+		Ability{ID: "healing_wave", Name: "Healing Wave", Element: Water, Category: StatusCat, Delivery: Self, Cost: 30, Heal: 0.2,
+			Text: "Heal 20% of max HP"},
 		Ability{ID: "stone_shock", Name: "Stone Shock", Element: Nature, Category: MagicalCat, Delivery: TargetedSpell, Power: 40, Cost: 25,
 			Inflict: []Inflict{{Status: Silence, Chance: 0.3, Duration: 2}}, Text: "30%: Silence for 2 rounds (no spells)"},
 		Ability{ID: "frost_shock", Name: "Frost Shock", Element: Ice, Category: MagicalCat, Delivery: TargetedSpell, Power: 45, Cost: 25,
@@ -361,7 +388,7 @@ func init() {
 		Ability{ID: "dark_pact", Name: "Dark Pact", Category: StatusCat, Delivery: Self,
 			Stats: []StatChange{{Stat: Attack, Stages: 1, OnSelf: true}, {Stat: Magic, Stages: 1, OnSelf: true}}},
 		Ability{ID: "life_drain", Name: "Life Drain", Element: Dark, Category: MagicalCat, Delivery: TargetedSpell, Power: 30,
-			Inflict: []Inflict{{Status: Drain}}},
+			Inflict: []Inflict{{Status: Leech}}}, // half the warlock's Drain
 		Ability{ID: "vampire_claw", Name: "Vampire Claw", Element: Physical, Category: PhysicalCat, Delivery: Melee, Power: 55},
 		Ability{ID: "mesmerize", Name: "Mesmerize", Category: StatusCat, Delivery: TargetedSpell, Uses: 1,
 			Inflict: []Inflict{{Status: Dread, Duration: 2}}},

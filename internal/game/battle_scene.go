@@ -73,7 +73,7 @@ type battleScene struct {
 
 func newBattleScene(g *Game, npc *world.NPC) *battleScene {
 	if g.demo != nil {
-		demoSlotOpeners(g.char)
+		g.char.EquipBotMoves()
 	}
 	player := g.char.Combatant()
 	enemy := character.Enemy(npc.Spawn.Kind, npc.Spawn.Level)
@@ -277,6 +277,12 @@ func (s *battleScene) demoChoice(opts []string) {
 }
 
 func (s *battleScene) choose(id string) {
+	if id == battle.CancelIceBlockID { // takes no turn: the menu comes back after the message
+		s.messages = s.b.CancelIceBlock()
+		s.phase, s.frame = phasePlay, 0
+		s.startMessage()
+		return
+	}
 	s.messages = s.b.Turn(id, s.b.ChooseEnemyAbility())
 	s.phase, s.frame = phasePlay, 0
 	if len(s.messages) > 0 {
@@ -287,7 +293,10 @@ func (s *battleScene) choose(id string) {
 // finish hands out rewards or applies the defeat, and queues the result lines.
 func (s *battleScene) finish() {
 	ch := s.g.char
-	ch.HP, ch.MP = float64(s.b.Player.HP), float64(s.b.Player.MP)
+	ch.HP = float64(s.b.Player.HP)
+	if s.b.Player.Resource == battle.Mana { // rage and energy don't carry over
+		ch.MP = float64(s.b.Player.MP)
+	}
 	s.phase, s.frame = phaseResult, 0
 	if !s.b.Won() {
 		money, xp := ch.Defeated()
@@ -370,7 +379,7 @@ func (s *battleScene) drawEnemyInfo(dst *gfx.Image) {
 
 func (s *battleScene) drawPlayerInfo(dst *gfx.Image, vw, field int) {
 	p := s.b.Player
-	nums := fmt.Sprintf("%d/%d HP  %d MP", int(math.Ceil(s.shown.playerHP)), p.Base.MaxHP, int(s.shown.playerMP))
+	nums := fmt.Sprintf("%d/%d HP  %d %s", int(math.Ceil(s.shown.playerHP)), p.Base.MaxHP, int(s.shown.playerMP), p.Resource)
 	w := max(104, s.g.font.Width(nums)+10)
 	x, y := vw-w-6, field-42
 	panel(dst, x, y, w, 38)
@@ -379,7 +388,7 @@ func (s *battleScene) drawPlayerInfo(dst *gfx.Image, vw, field int) {
 	s.g.font.Draw(dst, lv, x+w-5-s.g.font.Width(lv), y+4, ink)
 	hpFrac := s.shown.playerHP / float64(p.Base.MaxHP)
 	bar(dst, x+5, y+15, w-10, hpFrac, hpColor(hpFrac))
-	bar(dst, x+5, y+21, w-10, s.shown.playerMP/float64(max(1, p.Base.MaxMP)), mpColor)
+	bar(dst, x+5, y+21, w-10, s.shown.playerMP/float64(max(1, p.Base.MaxMP)), resourceColor(p.Resource))
 	s.g.font.Draw(dst, nums, x+5, y+28, ink)
 	s.drawEffects(dst, s.effects(p), x, y-2, w, true)
 }
@@ -472,12 +481,9 @@ func (s *battleScene) drawMenu(dst *gfx.Image, x, y, w, h int) {
 	a := battle.Get(opts[s.cursor])
 	var lines []string
 	if a.ID != battle.WaitID {
-		cost := "Free"
-		if a.Cost > 0 {
-			cost = fmt.Sprintf("%d MP", a.Cost)
-		}
+		cost := costText(a, s.b.Player.Resource)
 		if a.Power > 0 {
-			lines = append(lines, fmt.Sprintf("%s  Power %d", a.Element, a.Power))
+			lines = append(lines, fmt.Sprintf("%s  Power %d", a.Elements(), a.Power))
 		}
 		if a.Priority > 0 {
 			cost += fmt.Sprintf("  Priority +%d", a.Priority)
@@ -509,6 +515,29 @@ func bar(dst *gfx.Image, x, y, w int, frac float64, c color.Color) {
 	frac = math.Max(0, math.Min(1, frac))
 	gfx.FillRect(dst, float32(x), float32(y), float32(w), 5, color.RGBA{70, 60, 55, 255})
 	gfx.FillRect(dst, float32(x)+1, float32(y)+1, float32(float64(w-2)*frac), 3, c)
+}
+
+// resourceColor is the bar color of MP (blue), rage (red) or energy (yellow).
+func resourceColor(r battle.Resource) color.Color {
+	switch r {
+	case battle.Rage:
+		return color.RGBA{210, 50, 40, 255}
+	case battle.Energy:
+		return color.RGBA{235, 205, 50, 255}
+	}
+	return mpColor
+}
+
+// costText is what an ability costs or gains, e.g. "15 Rage", "Free  +10 Rage".
+func costText(a *battle.Ability, r battle.Resource) string {
+	cost := "Free"
+	if a.Cost > 0 {
+		cost = fmt.Sprintf("%d %s", a.Cost, r)
+	}
+	if a.Gain > 0 {
+		cost += fmt.Sprintf("  +%d %s", a.Gain, r)
+	}
+	return cost
 }
 
 var (

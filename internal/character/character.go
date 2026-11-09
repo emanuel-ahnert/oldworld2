@@ -35,6 +35,7 @@ type ClassInfo struct {
 	Start       []string
 	Learn       map[int]string   // level → ability learned automatically
 	Perks       map[int][]string // level → passives learned automatically too, e.g. one for the map
+	Resource    battle.Resource  // what abilities cost: mana, or the warrior's rage, the rogue's energy
 	HPRegen     float64          // multiplier for passive HP regeneration on the map
 	Description string           // one line for the new-game screen
 }
@@ -46,6 +47,7 @@ var classes = map[Class]ClassInfo{
 		Base:        battle.Stats{MaxHP: 120, MaxMP: 150, Attack: 14, Magic: 4, Defense: 13, Resistance: 8, Speed: 10},
 		Start:       []string{"heavy_strike", "battle_cry", "punch"}, // Punch is the fallback attack
 		Learn:       map[int]string{2: "overwhelm", 3: "enrage", 6: "charge", 8: "second_wind", 10: "rend"},
+		Resource:    battle.Rage,
 		HPRegen:     2,
 		Description: "Tough melee fighter who recovers fast.",
 	},
@@ -53,8 +55,8 @@ var classes = map[Class]ClassInfo{
 		Name:        "Mage",
 		Affinity:    []battle.Element{battle.Ice, battle.Water, battle.Fire},
 		Base:        battle.Stats{MaxHP: 85, MaxMP: 225, Attack: 4, Magic: 16, Defense: 7, Resistance: 12, Speed: 10},
-		Start:       []string{"ice_bolt", "fire_bolt"},                                                // Fire Bolt is the fallback attack
-		Learn:       map[int]string{2: "frost_ring", 3: "mana_shield", 6: "blink", 8: "tidal_splash"}, // early area spell against Smoke
+		Start:       []string{"ice_bolt", "fire_bolt"},                                                                                                                          // Fire Bolt is the fallback attack
+		Learn:       map[int]string{2: "frost_ring", 3: "mana_shield", 4: "ignite", 5: "tidal_splash", 6: "blink", 7: "arcane_explosion", 8: "frostfire_bolt", 10: "ice_block"}, // early area spell against Smoke
 		HPRegen:     1,
 		Description: "Fragile caster of ice, water and fire.",
 	},
@@ -64,6 +66,7 @@ var classes = map[Class]ClassInfo{
 		Base:        battle.Stats{MaxHP: 95, MaxMP: 150, Attack: 14, Magic: 5, Defense: 9, Resistance: 8, Speed: 11},
 		Start:       []string{"rogue_quick_stab", "rogue_smoke_veil", "jab"},
 		Learn:       map[int]string{2: "knife_throw", 3: "rogue_poisoned_blade", 6: "cheap_shot", 8: "gut_slash"},
+		Resource:    battle.Energy,
 		Perks:       map[int][]string{6: {"improved_sprint"}, 8: {"cheat_death", "prey_on_the_weak"}, 10: {"poison_resistance"}},
 		HPRegen:     1,
 		Description: "Fast striker with poisons and smoke.",
@@ -107,7 +110,7 @@ var classes = map[Class]ClassInfo{
 	Shaman: {
 		Name:        "Shaman",
 		Affinity:    []battle.Element{battle.Air, battle.Fire, battle.Water},
-		Base:        battle.Stats{MaxHP: 105, MaxMP: 150, Attack: 11, Magic: 11, Defense: 11, Resistance: 10, Speed: 10},
+		Base:        battle.Stats{MaxHP: 105, MaxMP: 150, Attack: 9, Magic: 9, Defense: 9, Resistance: 10, Speed: 10},
 		Start:       []string{"storm_bolt", "flame_shock", "zap"},
 		Learn:       map[int]string{2: "chain_lightning", 3: "healing_wave", 4: "stone_shock", 6: "frost_shock"},
 		Perks:       map[int][]string{4: {"wrath_totem", "healing_stream_totem"}},
@@ -206,6 +209,54 @@ func (c *Character) StaminaUse() float64 {
 
 const improvedSprintUse = 0.2
 
+// CatchUp learns what the character's level should have taught it but didn't: abilities
+// added to or moved to an earlier level since the save was made.
+func (c *Character) CatchUp() {
+	info := c.Class.Info()
+	for lv := 2; lv <= c.Level; lv++ {
+		ids := info.Perks[lv]
+		if id, ok := info.Learn[lv]; ok {
+			ids = append([]string{id}, ids...)
+		}
+		for _, id := range ids {
+			if !slices.Contains(c.Known, id) {
+				c.learn(id)
+			}
+		}
+	}
+}
+
+// BotMoves are the moves the demo bot and the balance tool always keep in their slots once
+// known: the openers (Charge, Cheap Shot, Judgment Hammer, Blink) and the mage's Tidal
+// Splash and Arcane Explosion, its answers to enemies that resist Ice and Fire (Arcane
+// Explosion takes Frost Ring's slot), and Frostfire Bolt, which takes Ice Bolt's.
+var BotMoves = []string{"charge", "cheap_shot", "judgment_hammer", "blink", "tidal_splash", "arcane_explosion", "frostfire_bolt"}
+
+// EquipBotMoves puts the BotMoves the character knows into its slots: into a free slot, or in
+// place of a self-targeted status move (the rogue's Smoke Veil gives way to Cheap Shot, the
+// mage's Mana Shield to Blink), else of the last slot that isn't a bot move.
+func (c *Character) EquipBotMoves() {
+	for _, id := range BotMoves {
+		if !c.Slottable(id) || slices.Contains(c.Active, id) || c.Equip(id) {
+			continue
+		}
+		slot := -1
+		for i, a := range c.Active {
+			if slices.Contains(BotMoves, a) {
+				continue
+			}
+			if ab := battle.Get(a); ab != nil && ab.Category == battle.StatusCat && ab.Delivery == battle.Self {
+				slot = i
+				break
+			}
+			slot = i
+		}
+		if slot >= 0 {
+			c.Replace(slot, id)
+		}
+	}
+}
+
 // Slottable reports whether an ability can be put into an active slot: a known regular
 // ability (not a passive or fallback attack).
 func (c *Character) Slottable(id string) bool {
@@ -248,10 +299,35 @@ func (c *Character) Combatant() *battle.Combatant {
 			abilities = append(abilities, id)
 		}
 	}
-	return &battle.Combatant{
+	b := &battle.Combatant{
 		Name: info.Name, You: true, Level: c.Level, Types: []battle.Element{battle.Physical}, Affinity: info.Affinity, Base: c.Stats(),
-		HP: int(math.Ceil(c.HP)), MP: int(math.Floor(c.MP)), Abilities: abilities,
+		HP: int(math.Ceil(c.HP)), MP: int(math.Floor(c.MP)), Abilities: abilities, Resource: info.Resource,
 	}
+	if info.Resource != battle.Mana {
+		b.Base.MaxMP, b.MP = ResourceMax, c.BattleStart()
+	}
+	return b
+}
+
+// ManaShare is the share of MP left, for deciding when to rest; 1 for classes without mana
+// (their rage or energy resets every battle).
+func (c *Character) ManaShare() float64 {
+	if c.Class.Info().Resource != battle.Mana {
+		return 1
+	}
+	return c.MP / float64(max(1, c.Stats().MaxMP))
+}
+
+// ResourceMax is the most rage or energy there can be.
+const ResourceMax = 100
+
+// BattleStart is the rage or energy a battle starts with: no rage, full energy. Off the
+// battlefield the HUD shows this too.
+func (c *Character) BattleStart() int {
+	if c.Class.Info().Resource == battle.Rage {
+		return 0
+	}
+	return ResourceMax
 }
 
 // Regenerate restores HP and MP for one frame on the adventure map.

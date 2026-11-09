@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -239,6 +240,7 @@ type scene struct {
 	enemyPlay *r3d.Player
 	seen      int     // battle message serial already animated
 	totem     float32 // seconds since the hero put down their totems, -1 before
+	ice       float32 // how far the mage's Ice Block has formed, 0 (none) to 1
 	bg        map[procgen.ZoneType]*rl.Texture2D
 }
 
@@ -908,6 +910,59 @@ func (sc *scene) drawTotem(model string, pos rl.Vector3, yaw float32) {
 		Scale: max(0.01, grow*totemScale), Tint: rl.White, Outline: 0.02})
 }
 
+// Ice Block: it grows up from the ground around the hero, and melts away when it ends.
+const (
+	iceForm = 0.35 // seconds
+	iceMelt = 0.6
+)
+
+// drawIceBlock draws a see-through block of ice around a fighter: a pale blue outer block
+// with bright edges, a fainter inner core and a few frosty facets. amount is how far it
+// has formed (growing upward) or, while melting, how much is left (shrinking and fading).
+func drawIceBlock(pos rl.Vector3, yaw, amount float32, forming bool) {
+	const w, h, d = 1.3, 2.1, 1.2
+	height, fade := float32(h), amount
+	if forming {
+		height, fade = h*amount, 1
+	} else {
+		height = h * (0.4 + 0.6*amount)
+	}
+	tint := func(r, g, b uint8, a float32) color.RGBA { return color.RGBA{r, g, b, uint8(a * fade)} }
+	at := func(y float32) rl.Vector3 { return rl.NewVector3(0, y, 0) }
+	rl.PushMatrix()
+	rl.Translatef(pos.X, pos.Y, pos.Z)
+	rl.Rotatef(yaw, 0, 1, 0)
+	rl.DisableDepthMask()                                                           // the hero inside stays visible through every face
+	rl.DrawCube(at(height/2), w*0.84, height*0.95, d*0.84, tint(120, 185, 235, 60)) // the inner core
+	rl.DrawCube(at(height/2), w, height, d, tint(150, 210, 245, 105))
+	frost := min(height, 0.4) // frost thickening at the foot, snow on top
+	rl.DrawCube(at(frost/2), w*1.01, frost, d*1.01, tint(225, 242, 255, 110))
+	rl.DrawCube(at(height-0.04), w*1.01, 0.08, d*1.01, tint(240, 250, 255, 150))
+	// Shards of frost on each side.
+	for i, f := range []struct{ x, y, z, s float32 }{
+		{-0.3, 0.7, 1, 0.3}, {0.35, 0.35, 1, 0.24}, {0.2, 0.62, -1, 0.3}, {-0.35, 0.3, -1, 0.22},
+		{1, 0.55, 0.25, 0.28}, {1, 0.25, -0.3, 0.2}, {-1, 0.6, -0.2, 0.3}, {-1, 0.3, 0.3, 0.22},
+	} {
+		y := f.y * height
+		if y+f.s > height {
+			continue
+		}
+		x, z := f.x*w/2, f.z*d/2
+		if i >= 4 {
+			x, z = f.x*w/2, f.z*d/2*1.6
+		} else {
+			x = f.x * w / 1.6
+		}
+		rl.DrawCube(rl.NewVector3(x, y, z), f.s, f.s*1.7, f.s, tint(235, 248, 255, 95))
+	}
+	rl.EnableDepthMask()
+	for _, k := range []float32{0.995, 1, 1.006} { // thick bright edges
+		rl.DrawCubeWires(at(height/2), w*k, height*k, d*k, tint(240, 252, 255, 235))
+	}
+	rl.DrawCubeWires(at(height/2), w*0.84, height*0.95, d*0.84, tint(200, 235, 255, 110))
+	rl.PopMatrix()
+}
+
 // drawBattle draws the fighters of a battle in front of the zone's painted background.
 func (sc *scene) drawBattle(s *battleScene) {
 	hero := sc.heroModel()
@@ -920,6 +975,7 @@ func (sc *scene) drawBattle(s *battleScene) {
 		hero.Stow = false
 		hero.Fight = true
 		sc.totem = -1
+		sc.ice = 0
 	}
 	// Start the animations for a new message: the attacker strikes, the target flinches,
 	// the loser falls.
@@ -954,8 +1010,16 @@ func (sc *scene) drawBattle(s *battleScene) {
 			hero.Play.Once(hero.Moves.Death, true)
 		}
 	}
+	encased := slices.ContainsFunc(s.effects(s.b.Player), func(e battle.Effect) bool { return e.Label == "Ice Block" })
+	if encased {
+		sc.ice = min(1, sc.ice+frameDT/iceForm)
+	} else {
+		sc.ice = max(0, sc.ice-frameDT/iceMelt)
+	}
 	hero.Play.Loop(hero.Moves.Ready)
-	hero.Play.Update(frameDT)
+	if sc.ice < 1 { // frozen still inside the ice
+		hero.Play.Update(frameDT)
+	}
 	sc.enemyPlay.Update(frameDT)
 	if sc.totem >= 0 {
 		sc.totem += frameDT
@@ -1005,6 +1069,9 @@ func (sc *scene) drawBattle(s *battleScene) {
 	if visible(s.b.Enemy) && (s.b.Enemy.Alive() || s.phase == phasePlay) {
 		r3d.Shadow(enemyPos, 0.3+f.size*0.2)
 		sc.drawFighter(f, sc.enemyPlay, enemyPos, toward(enemyPos, heroPos))
+	}
+	if sc.ice > 0 {
+		drawIceBlock(heroPos, toward(heroPos, enemyPos)+5, sc.ice, encased) // see-through: drawn last
 	}
 	rl.EndMode3D()
 }

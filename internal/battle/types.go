@@ -14,10 +14,11 @@ const (
 	Air
 	Holy
 	Dark
+	Arcane // raw magic: neutral to every type, and no creature is Arcane
 	numElements
 )
 
-var elementNames = [numElements]string{"Physical", "Fire", "Water", "Ice", "Nature", "Air", "Holy", "Dark"}
+var elementNames = [numElements]string{"Physical", "Fire", "Water", "Ice", "Nature", "Air", "Holy", "Dark", "Arcane"}
 
 func (e Element) String() string { return elementNames[e] }
 
