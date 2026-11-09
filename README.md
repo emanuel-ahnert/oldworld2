@@ -1,12 +1,25 @@
 # Oldworld2
 
-A top-down, turn-based RPG in Go. You explore an endless, procedurally generated overworld
+This game explores what happens if you combine WoW classes with Diablo random map and item generation, using a Pokemon style combat system. A top-down RPG with a realtime map and turn-based fights.
+
+It is still in early development with all the ballance issues and missing features. The item system is not implemented at all right now.
+
+You explore an endless, procedurally generated overworld
 tile by tile; enemies you can see notice you and give chase, and a fight switches to a
 separate battle view where your one hero fights them turn by turn with spells and
 abilities. Win XP and money, learn abilities, and push outward into harder zones.
 
 The world is 3D (raylib) with a comic look: toon shading and ink outlines, painted battle
 backgrounds, our own pixel font, music and sounds.
+
+## Screenshots
+
+<table>
+<tr><td width="33%"><img src="docs/screenshots/battle-mage-ice-block.jpg" alt="Mage, level 10: Ice Block in the Grassland"><br><sub>Mage, level 10: Ice Block in the Grassland</sub></td><td width="33%"><img src="docs/screenshots/battle-shaman-totems.jpg" alt="Shaman, level 7: totems in the North"><br><sub>Shaman, level 7: totems in the North</sub></td><td width="33%"><img src="docs/screenshots/battle-rogue-cheap-shot.jpg" alt="Rogue, level 9: Cheap Shot in the North"><br><sub>Rogue, level 9: Cheap Shot in the North</sub></td></tr>
+<tr><td width="33%"><img src="docs/screenshots/battle-paladin-judgment.jpg" alt="Paladin, level 5: Judgment Hammer in the Unholy lands"><br><sub>Paladin, level 5: Judgment Hammer in the Unholy lands</sub></td><td width="33%"><img src="docs/screenshots/battle-priest-holy-burst.jpg" alt="Priest, level 6: Holy Burst against a bat swarm"><br><sub>Priest, level 6: Holy Burst against a bat swarm</sub></td><td width="33%"><img src="docs/screenshots/battle-druid-moonbeam.jpg" alt="Druid, level 12: Moonbeam against a mummy"><br><sub>Druid, level 12: Moonbeam against a mummy</sub></td></tr>
+<tr><td width="33%"><img src="docs/screenshots/battle-warrior-charge.jpg" alt="Warrior, level 8: Charge in the Mediterranean"><br><sub>Warrior, level 8: Charge in the Mediterranean</sub></td><td width="33%"><img src="docs/screenshots/battle-warlock-hellfire.jpg" alt="Warlock, level 7: Hellfire Rain against a wind spirit"><br><sub>Warlock, level 7: Hellfire Rain against a wind spirit</sub></td><td width="33%"><img src="docs/screenshots/battle-hunter-volley.jpg" alt="Hunter, level 8: Volley in the desert"><br><sub>Hunter, level 8: Volley in the desert</sub></td></tr>
+<tr><td width="33%"><img src="docs/screenshots/map-grassland.jpg" alt="The map: roads near a Grassland settlement"><br><sub>The map: roads near a Grassland settlement</sub></td><td width="33%"><img src="docs/screenshots/map-desert.jpg" alt="The map: scorpions and a sand snake in the desert"><br><sub>The map: scorpions and a sand snake in the desert</sub></td><td width="33%"><img src="docs/screenshots/map-ancient-desert.jpg" alt="The map: scarabs spot the hero in the Ancient Desert"><br><sub>The map: scarabs spot the hero in the Ancient Desert</sub></td></tr>
+</table>
 
 ## Features
 
@@ -46,8 +59,10 @@ zone, world seed), or watch a demo where the game plays itself with a random cla
 zone. Saves go to `~/.local/share/oldworld2/save.db`.
 
 Useful flags for testing: `-new` starts a new game right away, with `-class rogue`,
-`-zone north`, `-seed 42`, `-level 6` or `-at X,Y`; `-demo` starts the demo; `-mute` turns the sound off. See
+`-zone north`, `-seed 42`, `-level 6`, `-moves ice_block,blink` (equip these abilities) or `-at X,Y`; `-demo` starts the demo; `-mute` turns the sound off. See
 `go run ./cmd/game -h` for all of them.
+
+`tools/screenshots.sh` retakes the screenshots above (needs ImageMagick).
 
 ## Controls
 

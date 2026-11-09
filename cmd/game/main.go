@@ -26,6 +26,7 @@ func main() {
 	seed := flag.Int64("seed", 1, "world seed")
 	class := flag.String("class", "warrior", "character class: warrior, mage, rogue, hunter, warlock, priest, paladin, shaman or druid")
 	level := flag.Int("level", 1, "start at this level (for testing)")
+	moves := flag.String("moves", "", "equip these known abilities in a new game, comma-separated, e.g. ice_block,frost_ring (for testing)")
 	newGame := flag.Bool("new", false, "start a new game (replaces the save); -seed, -class and -level only apply to new games")
 	at := flag.String("at", "", "start a new game at tile X,Y instead of the start point (for testing)")
 	zone := flag.String("zone", "grassland", "start a new game in the nearest zone of this type: "+zoneNames())
@@ -39,7 +40,7 @@ func main() {
 	mute := flag.Bool("mute", false, "no music or sound (test runs are always silent)")
 	flag.Parse()
 
-	if err := run(*seed, *class, *level, *at, *zone, *newGame, *title, *demo, *mute, *savePath, *assetsDir, *shot, *shotFrame, *script); err != nil {
+	if err := run(*seed, *class, *level, *moves, *at, *zone, *newGame, *title, *demo, *mute, *savePath, *assetsDir, *shot, *shotFrame, *script); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		showFatal(err)
 		os.Exit(1)
@@ -55,7 +56,7 @@ func zoneNames() string {
 	return strings.Join(names, ", ")
 }
 
-func run(seed int64, className string, level int, at, zoneName string, newGame, forceTitle, demo, mute bool, savePath, assetsFlag, shot string, shotFrame int, script string) error {
+func run(seed int64, className string, level int, moves, at, zoneName string, newGame, forceTitle, demo, mute bool, savePath, assetsFlag, shot string, shotFrame int, script string) error {
 	var startAt *[2]int
 	if at != "" {
 		var x, y int
@@ -63,6 +64,10 @@ func run(seed int64, className string, level int, at, zoneName string, newGame, 
 			return fmt.Errorf("-at %q: want X,Y", at)
 		}
 		startAt = &[2]int{x, y}
+	}
+	var moveList []string
+	if moves != "" {
+		moveList = strings.Split(moves, ",")
 	}
 	zone, ok := procgen.ParseZoneType(zoneName)
 	if !ok || !slices.Contains(procgen.Implemented, zone) {
@@ -115,7 +120,7 @@ func run(seed int64, className string, level int, at, zoneName string, newGame, 
 	rl.SetTargetFPS(60)
 
 	g, err := game.New(game.Options{
-		Seed: seed, Class: class, Level: level, StartAt: startAt, StartZone: zone, AssetsDir: dir, Store: store, NewGame: newGame,
+		Seed: seed, Class: class, Level: level, Moves: moveList, StartAt: startAt, StartZone: zone, AssetsDir: dir, Store: store, NewGame: newGame,
 		// Without command line choices, the title screen lets the player continue or set up a new game.
 		Title: forceTitle || (!testRun && !newGame && !demo && startAt == nil), Demo: demo, Script: steps, ShotPath: shot, ShotFrame: shotFrame,
 		Sound: !testRun && !mute, // test runs must stay silent

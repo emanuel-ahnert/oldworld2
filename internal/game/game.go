@@ -39,6 +39,7 @@ type Options struct {
 	Seed      int64
 	Class     character.Class
 	Level     int              // start at this level (for testing); 0 or 1 = a new character
+	Moves     []string         // equip these abilities in a new game instead of the default ones (for testing)
 	StartAt   *[2]int          // start a new game at this tile instead of the start point (for testing)
 	StartZone procgen.ZoneType // a new game starts at the nearest settlement of this zone type
 	AssetsDir string

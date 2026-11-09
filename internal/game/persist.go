@@ -42,6 +42,14 @@ func (g *Game) loadOrStart() error {
 	for g.char.Level < g.opts.Level {
 		g.char.GainXP(character.XPToNext(g.char.Level))
 	}
+	if len(g.opts.Moves) > 0 {
+		g.char.Active = nil
+		for _, id := range g.opts.Moves {
+			if !g.char.Equip(id) {
+				return fmt.Errorf("can't equip %q at level %d (unknown, not learned yet, or more than %d)", id, g.char.Level, character.MaxActive)
+			}
+		}
+	}
 	g.char.Heal()
 	if g.opts.StartZone != procgen.Grassland {
 		if zx, zy, ok := procgen.NearestZone(g.opts.Seed, g.opts.StartZone); ok {
