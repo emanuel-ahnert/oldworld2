@@ -732,3 +732,44 @@ func TestBurnKeepsPhysicalDamage(t *testing.T) {
 		t.Fatalf("bite while burned: %d, want %d", got, before)
 	}
 }
+
+// Blink: melee can't reach the mage this round and the next, ranged attacks still can.
+func TestBlinkStopsMelee(t *testing.T) {
+	m, w := mage(200), wolf()
+	m.Abilities = append(m.Abilities, "blink")
+	w.Abilities = append(w.Abilities, "sling_stone")
+	w.Base.MaxHP, w.HP = 500, 500
+	b := New(m, w, 1)
+	b.Turn("blink", "bite") // the bite was chosen first, then the mage blinks away
+	if m.HP != m.Base.MaxHP {
+		t.Fatalf("the bite hit through Blink: %d HP", m.HP)
+	}
+	if ok, why := b.Usable(w, "bite"); ok || why != outOfReach {
+		t.Fatalf("round 2: bite usable %v (%q), want out of reach", ok, why)
+	}
+	b.Turn(WaitID, "bite")
+	if m.HP != m.Base.MaxHP {
+		t.Fatalf("the bite hit in the round after Blink: %d HP", m.HP)
+	}
+	if ok, _ := b.Usable(w, "bite"); !ok {
+		t.Fatal("bite still out of reach two rounds after Blink")
+	}
+	b.Turn("blink", "sling_stone")
+	if m.HP == m.Base.MaxHP {
+		t.Fatal("Blink stopped a ranged attack")
+	}
+}
+
+// Every hit names its damage, also critical hits, type matches and the finishing blow.
+func TestHitMessagesShowDamage(t *testing.T) {
+	for seed := uint64(1); seed <= 200; seed++ {
+		m, w := mage(200), wolf()
+		w.Types = []Element{Nature} // weak to Fire
+		b := New(m, w, seed)
+		for _, ev := range b.Turn("fire_bolt", WaitID) {
+			if ev.Hit == w && !strings.Contains(ev.Text, "damage") {
+				t.Fatalf("seed %d: hit message without damage: %q", seed, ev.Text)
+			}
+		}
+	}
+}

@@ -916,52 +916,118 @@ const (
 	iceMelt = 0.6
 )
 
-// drawIceBlock draws a see-through block of ice around a fighter: a pale blue outer block
-// with bright edges, a fainter inner core and a few frosty facets. amount is how far it
-// has formed (growing upward) or, while melting, how much is left (shrinking and fading).
-func drawIceBlock(pos rl.Vector3, yaw, amount float32, forming bool) {
-	const w, h, d = 1.3, 2.1, 1.2
-	height, fade := float32(h), amount
-	if forming {
-		height, fade = h*amount, 1
-	} else {
-		height = h * (0.4 + 0.6*amount)
+// The ice block is a jagged crystal: a ring of eight uneven columns (radius and height vary
+// per corner) that bulge out around the middle, a peaked cap and a few spikes jutting out
+// at the foot and the top. Coordinates are around the fighter's feet, facing +Z.
+type iceCorner struct{ foot, waist, shoulder, waistY, shoulderY float32 }
+
+var (
+	iceCorners = [...]iceCorner{
+		{0.62, 0.72, 0.55, 0.95, 1.85},
+		{0.70, 0.80, 0.60, 1.15, 2.05},
+		{0.58, 0.66, 0.50, 0.85, 1.70},
+		{0.66, 0.78, 0.62, 1.05, 1.95},
+		{0.60, 0.70, 0.52, 0.90, 2.10},
+		{0.72, 0.76, 0.58, 1.20, 1.80},
+		{0.56, 0.68, 0.54, 1.00, 2.00},
+		{0.68, 0.74, 0.50, 0.92, 1.75},
 	}
-	tint := func(r, g, b uint8, a float32) color.RGBA { return color.RGBA{r, g, b, uint8(a * fade)} }
-	at := func(y float32) rl.Vector3 { return rl.NewVector3(0, y, 0) }
+	iceApex = rl.NewVector3(0.08, 2.35, -0.05)
+	// Spikes: where they sprout, the way they point, length and thickness.
+	iceSpikes = []struct {
+		at, dir rl.Vector3
+		length  float32
+		width   float32
+	}{
+		{rl.NewVector3(0.55, 0.05, 0.35), rl.NewVector3(1, 0.7, 0.5), 0.45, 0.13},
+		{rl.NewVector3(-0.6, 0.05, 0.1), rl.NewVector3(-1, 0.9, 0.2), 0.38, 0.11},
+		{rl.NewVector3(0.1, 0.05, -0.6), rl.NewVector3(0.2, 0.8, -1), 0.4, 0.12},
+		{rl.NewVector3(-0.3, 0.05, 0.55), rl.NewVector3(-0.4, 1, 1), 0.3, 0.09},
+		{rl.NewVector3(0.3, 1.9, 0.2), rl.NewVector3(0.5, 1, 0.3), 0.42, 0.1},
+		{rl.NewVector3(-0.25, 1.95, -0.2), rl.NewVector3(-0.4, 1, -0.2), 0.35, 0.09},
+		{rl.NewVector3(0.7, 1.1, -0.2), rl.NewVector3(1, 0.3, -0.3), 0.28, 0.09},
+	}
+	iceLight = rl.Vector3Normalize(rl.NewVector3(-0.5, 0.8, 0.6))
+)
+
+// drawIceBlock draws the see-through ice crystal around a fighter. amount is how far it has
+// formed (growing upward) or, while melting, how much is left (shrinking and fading).
+func drawIceBlock(pos rl.Vector3, yaw, amount float32, forming bool) {
+	grow, fade := amount, amount
+	if forming {
+		fade = 1
+	} else {
+		grow = 0.4 + 0.6*amount
+	}
+	at := func(v rl.Vector3) rl.Vector3 { return rl.NewVector3(v.X, v.Y*grow, v.Z) }
+	corner := func(i int, r, y float32) rl.Vector3 {
+		a := float64(i) * 2 * math.Pi / float64(len(iceCorners))
+		return at(rl.NewVector3(r*float32(math.Sin(a)), y, r*0.9*float32(math.Cos(a))))
+	}
+	// Each facet is shaded by how it faces a fixed light: the facets read as cut ice.
+	tri := func(p, q, r rl.Vector3) {
+		n := rl.Vector3Normalize(rl.Vector3CrossProduct(rl.Vector3Subtract(q, p), rl.Vector3Subtract(r, p)))
+		k := float32(math.Abs(float64(rl.Vector3DotProduct(n, iceLight))))
+		lerp := func(a, b float32) uint8 { return uint8(a + (b-a)*k) }
+		rl.Color4ub(lerp(70, 225), lerp(140, 245), lerp(215, 255), uint8((95+75*k)*fade))
+		for _, v := range []rl.Vector3{p, q, r} {
+			rl.Vertex3f(v.X, v.Y, v.Z)
+		}
+	}
+	quad := func(a, b, c, d rl.Vector3) { tri(a, b, c); tri(a, c, d) }
+	edge := tint(240, 252, 255, 220*fade)
+
 	rl.PushMatrix()
 	rl.Translatef(pos.X, pos.Y, pos.Z)
 	rl.Rotatef(yaw, 0, 1, 0)
-	rl.DisableDepthMask()                                                           // the hero inside stays visible through every face
-	rl.DrawCube(at(height/2), w*0.84, height*0.95, d*0.84, tint(120, 185, 235, 60)) // the inner core
-	rl.DrawCube(at(height/2), w, height, d, tint(150, 210, 245, 105))
-	frost := min(height, 0.4) // frost thickening at the foot, snow on top
-	rl.DrawCube(at(frost/2), w*1.01, frost, d*1.01, tint(225, 242, 255, 110))
-	rl.DrawCube(at(height-0.04), w*1.01, 0.08, d*1.01, tint(240, 250, 255, 150))
-	// Shards of frost on each side.
-	for i, f := range []struct{ x, y, z, s float32 }{
-		{-0.3, 0.7, 1, 0.3}, {0.35, 0.35, 1, 0.24}, {0.2, 0.62, -1, 0.3}, {-0.35, 0.3, -1, 0.22},
-		{1, 0.55, 0.25, 0.28}, {1, 0.25, -0.3, 0.2}, {-1, 0.6, -0.2, 0.3}, {-1, 0.3, 0.3, 0.22},
-	} {
-		y := f.y * height
-		if y+f.s > height {
-			continue
-		}
-		x, z := f.x*w/2, f.z*d/2
-		if i >= 4 {
-			x, z = f.x*w/2, f.z*d/2*1.6
-		} else {
-			x = f.x * w / 1.6
-		}
-		rl.DrawCube(rl.NewVector3(x, y, z), f.s, f.s*1.7, f.s, tint(235, 248, 255, 95))
+	rl.DisableDepthMask() // the hero inside stays visible through every face
+	rl.DisableBackfaceCulling()
+	rl.Begin(rl.Triangles)
+	n := len(iceCorners)
+	for i := range n {
+		c, d := iceCorners[i], iceCorners[(i+1)%n]
+		f0, f1 := corner(i, c.foot, 0), corner(i+1, d.foot, 0)
+		w0, w1 := corner(i, c.waist, c.waistY), corner(i+1, d.waist, d.waistY)
+		s0, s1 := corner(i, c.shoulder, c.shoulderY), corner(i+1, d.shoulder, d.shoulderY)
+		quad(f0, f1, w1, w0)
+		quad(w0, w1, s1, s0)
+		tri(s0, s1, at(iceApex))
 	}
+	for _, sp := range iceSpikes {
+		dir := rl.Vector3Normalize(sp.dir)
+		side := rl.Vector3Normalize(rl.Vector3CrossProduct(dir, rl.NewVector3(0, 1, 0.01)))
+		up := rl.Vector3CrossProduct(side, dir)
+		tip := at(rl.Vector3Add(sp.at, rl.Vector3Scale(dir, sp.length)))
+		var base [4]rl.Vector3
+		for j, o := range [][2]float32{{1, 0}, {0, 1}, {-1, 0}, {0, -1}} {
+			base[j] = at(rl.Vector3Add(sp.at, rl.Vector3Add(rl.Vector3Scale(side, o[0]*sp.width), rl.Vector3Scale(up, o[1]*sp.width))))
+		}
+		for j := range 4 {
+			tri(base[j], base[(j+1)%4], tip)
+		}
+	}
+	rl.End()
+	rl.EnableBackfaceCulling()
 	rl.EnableDepthMask()
-	for _, k := range []float32{0.995, 1, 1.006} { // thick bright edges
-		rl.DrawCubeWires(at(height/2), w*k, height*k, d*k, tint(240, 252, 255, 235))
+	// Bright edges along the columns and around the cap.
+	for i := range n {
+		c, d := iceCorners[i], iceCorners[(i+1)%n]
+		f, w, s := corner(i, c.foot, 0), corner(i, c.waist, c.waistY), corner(i, c.shoulder, c.shoulderY)
+		rl.DrawLine3D(f, w, edge)
+		rl.DrawLine3D(w, s, edge)
+		rl.DrawLine3D(s, at(iceApex), edge)
+		rl.DrawLine3D(s, corner(i+1, d.shoulder, d.shoulderY), edge)
+		rl.DrawLine3D(w, corner(i+1, d.waist, d.waistY), tint(220, 240, 255, 160*fade))
+		rl.DrawLine3D(f, corner(i+1, d.foot, 0), edge)
 	}
-	rl.DrawCubeWires(at(height/2), w*0.84, height*0.95, d*0.84, tint(200, 235, 255, 110))
+	for _, sp := range iceSpikes { // the spikes' ridges
+		tip := at(rl.Vector3Add(sp.at, rl.Vector3Scale(rl.Vector3Normalize(sp.dir), sp.length)))
+		rl.DrawLine3D(at(sp.at), tip, edge)
+	}
 	rl.PopMatrix()
 }
+
+func tint(r, g, b uint8, a float32) color.RGBA { return color.RGBA{r, g, b, uint8(min(255, a))} }
 
 // drawBattle draws the fighters of a battle in front of the zone's painted background.
 func (sc *scene) drawBattle(s *battleScene) {

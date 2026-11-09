@@ -135,7 +135,7 @@ Roads guide the player to the main objectives: settlements and the crossings to 
 ### 2.8 Settlements
 - One settlement per zone (the hub): at the world origin in the start zone, otherwise within ±64 tiles of the zone center
 - A dirt plaza (radius 5) where the roads meet, the **inn** and up to four houses around it. Grassland uses the orange-roofed houses; the beige sandstone and red brick houses fit the desert better. Buildings search for free spots near the plaza, so they never stand on a road
-- No trees or bushes within 24 tiles, no lakes within 28 tiles, no enemies within 40 tiles of the hub
+- No trees or bushes within 24 tiles, no lakes within 28 tiles, no enemies within 40 tiles of the hub, and no elites within 100 tiles (trash takes their place), so a new character can level up on trash before meeting the first elite
 - **Inn = checkpoint:** face the inn door and press Space to fully heal and make it your respawn point. A new game starts in front of the start zone's inn
 - Planned: shops, class trainers, villagers with one-liners, more buildings in bigger settlements
 
@@ -286,6 +286,6 @@ Enemies are **not spread evenly** across a zone. Placement follows reasons (habi
 | Hedge wizards (elite) | Lone towers, stone circles | Alone |
 
 - **Camps and points of interest:** elites and champions sit at camps, ruins and dens, which act as small danger spots
-- **Safe areas:** no hostile spawns near settlements and checkpoints; roads are quieter, except for ambushes near camps
+- **Safe areas:** no hostile spawns near settlements and checkpoints, and no elites within 100 tiles of a settlement; roads are quieter, except for ambushes near camps
 - **Density:** grows with distance from roads and settlements, highest in remote corners and near zone barriers
 - **Randomness:** seeded noise varies density per habitat, group sizes are rolled, and groups keep a minimum distance from each other (Poisson-disc style) so they don't pile up. A few enemies wander instead of staying at their spot

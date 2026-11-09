@@ -43,7 +43,7 @@ const (
 	NoSpecial      Special = iota
 	Overwhelm              // usable only right after the user missed or was dodged; can't be dodged
 	ManaShield             // half of the damage taken comes out of MP
-	Blink                  // the next attack against the user misses
+	Blink                  // melee attacks can't reach the user for Duration rounds
 	Smoke                  // ranged attacks and targeted spells can't target the user
 	Enrage                 // passive: taking damage may enrage (+40% damage), always on critical hits
 	SecondWind             // passive: taking a hit may start Regen (30%, always on critical hits)
@@ -168,8 +168,8 @@ func init() {
 			Power: 55, Cost: 25, Stats: []StatChange{{Stat: Speed, Stages: -1}}, Text: "Ice or Fire, whichever hurts the target more; Speed down"},
 		Ability{ID: "arcane_explosion", Name: "Arcane Explosion", Element: Arcane, Category: MagicalCat, Delivery: AreaSpell, Power: 60, Cost: 30,
 			Text: "Area spell: raw arcane power, neutral to every type (gets through smoke)"},
-		Ability{ID: "blink", Name: "Blink", Category: StatusCat, Delivery: Self, Cost: 20, Special: Blink, Priority: 2,
-			Text: "Evade the next attack"},
+		Ability{ID: "blink", Name: "Blink", Category: StatusCat, Delivery: Self, Cost: 20, Special: Blink, Priority: 2, Duration: 2,
+			Text: "Melee attacks can't reach you this round and the next"},
 		Ability{ID: "ignite", Name: "Ignite", Element: Fire, Category: StatusCat, Delivery: TargetedSpell, Cost: 20,
 			Inflict: []Inflict{{Status: Ignite, Duration: igniteRounds}}, Text: "Ignite: 1/16 HP fire damage per round, 8 rounds"},
 		Ability{ID: "ice_block", Name: "Ice Block", Category: StatusCat, Delivery: Self, Cost: 25, Special: IceBlock, Duration: 2, Priority: 1,

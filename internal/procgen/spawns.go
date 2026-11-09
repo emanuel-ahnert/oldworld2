@@ -20,12 +20,13 @@ const (
 	spawnBaseOdds  = 0.16 // chance that a cell hosts a group, near the start
 	spawnMaxOdds   = 0.32 // chance far away from the start
 	spawnRampTiles = 300.0
-	safeRadius     = 16 // no enemies this close to the start
-	banditMinDist  = 60 // bandit camps stay away from the start
-	banditRoadMax  = 24 // bandit camps are at most this far from a road
-	roadQuiet      = 5  // no enemy groups this close to a road's center line
-	guardianRange  = 30 // tomb guardians stay within this many tiles of a monument
-	shrineSafe     = 12 // no enemy groups this close to a shrine
+	safeRadius     = 16  // no enemies this close to the start
+	banditMinDist  = 60  // bandit camps stay away from the start
+	banditRoadMax  = 24  // bandit camps are at most this far from a road
+	roadQuiet      = 5   // no enemy groups this close to a road's center line
+	guardianRange  = 30  // tomb guardians stay within this many tiles of a monument
+	shrineSafe     = 12  // no enemy groups this close to a shrine
+	eliteHubSafe   = 100 // no elites this close to a settlement, where games start: trash takes their place
 )
 
 const (
@@ -55,7 +56,7 @@ func spawns(seed int64, c *Chunk, t *terrainCache) []Spawn {
 			if rand01(seed, saltSpawnCell, wx, wy) >= odds {
 				continue
 			}
-			kind, ok := pickKind(seed, c, wx, wy, dist, roadDist)
+			kind, ok := pickKind(seed, c, wx, wy, dist, roadDist, layout.hubDist(wx, wy) >= eliteHubSafe)
 			if !ok {
 				continue
 			}
@@ -91,8 +92,25 @@ func enemyLevel(tier string, hubDist float64, difficulty int) int {
 	return base + min(3, 1+int(hubDist/80))
 }
 
-// pickKind chooses a creature for a spawn cell from the habitat around it.
-func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creature.Kind, bool) {
+// pickKind chooses a creature for a spawn cell from the habitat around it; without elites
+// (near a settlement) only from the trash that lives there.
+func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64, elites bool) (creature.Kind, bool) {
+	opts := habitat(seed, c, wx, wy, dist, roadDist)
+	if !elites {
+		var trash []spawnOption
+		for _, o := range opts {
+			if creature.Get(o.kind).Tier != "elite" {
+				trash = append(trash, o)
+			}
+		}
+		opts = trash
+	}
+	return pickOption(seed, wx, wy, opts)
+}
+
+// habitat lists the creatures that may live in a spawn cell, weighted by how well it suits
+// them.
+func habitat(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) []spawnOption {
 	forest := fbm(seed, saltForest, wx, wy, forestScale, 3)
 	waterNearby := false
 	lx, ly := wx-c.CX*ChunkSize, wy-c.CY*ChunkSize
@@ -120,7 +138,7 @@ func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creatur
 		if LayoutAt(seed, wx, wy).nearMonument(wx, wy, guardianRange) {
 			opts = append(opts, spawnOption{creature.TombGuardian, 3}, spawnOption{creature.Mummy, 1.5})
 		}
-		return pickOption(seed, wx, wy, opts)
+		return opts
 	case North:
 		bm := biomes[North]
 		switch {
@@ -137,7 +155,7 @@ func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creatur
 		if dist > banditMinDist && roadDist < banditRoadMax && forest < bm.forestStart {
 			opts = append(opts, spawnOption{creature.Berserker, 1.5})
 		}
-		return pickOption(seed, wx, wy, opts)
+		return opts
 	case Mediterranean:
 		bm := biomes[Mediterranean]
 		switch {
@@ -156,7 +174,7 @@ func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creatur
 			}
 			opts = append(opts, spawnOption{creature.Corsair, corsairs}, spawnOption{creature.Hoplite, 0.6 + min(1.2, dist/400)})
 		}
-		return pickOption(seed, wx, wy, opts)
+		return opts
 	case Unholy:
 		bm := biomes[Unholy]
 		switch {
@@ -171,7 +189,7 @@ func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creatur
 		if dist > banditMinDist*2 && forest < bm.forestStart { // vampires keep to themselves, far from the settlement
 			opts = append(opts, spawnOption{creature.Vampire, 0.06 + min(0.2, dist/1500)})
 		}
-		return pickOption(seed, wx, wy, opts)
+		return opts
 	case Desert:
 		bm := biomes[Desert]
 		switch {
@@ -183,7 +201,7 @@ func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creatur
 		if roadDist < banditRoadMax {
 			opts = append(opts, spawnOption{creature.NomadRaider, 0.5})
 		}
-		return pickOption(seed, wx, wy, opts)
+		return opts
 	}
 	switch {
 	case forest > forestStart-0.04 && forest < forestStart+0.1: // forest edge
@@ -201,7 +219,7 @@ func pickKind(seed int64, c *Chunk, wx, wy int, dist, roadDist float64) (creatur
 		opts = append(opts, spawnOption{creature.Bandit, 2})
 	}
 
-	return pickOption(seed, wx, wy, opts)
+	return opts
 }
 
 // spawnOption is a creature with a weight for the habitat roll.

@@ -112,8 +112,8 @@ type Combatant struct {
 	bear        bool
 	manaShield  int
 	smoke       int
-	iceBlock    int // rounds of Ice Block left
-	evadeNext   bool
+	iceBlock    int            // rounds of Ice Block left
+	blinked     int            // rounds melee attacks can't reach the combatant (Blink)
 	overwhelmOK bool           // the user missed or was dodged last turn
 	cheated     bool           // Cheat Death was used this battle
 	totems      []Special      // the totems standing (WrathTotem, HealingTotem)
@@ -123,9 +123,9 @@ type Combatant struct {
 func (c *Combatant) init() {
 	c.status = map[StatusKind]int{}
 	c.stages = [numStats]int{}
-	c.enraged, c.regen, c.shield, c.sealed, c.manaShield, c.smoke, c.iceBlock = 0, 0, 0, 0, 0, 0, 0
+	c.enraged, c.regen, c.shield, c.sealed, c.manaShield, c.smoke, c.iceBlock, c.blinked = 0, 0, 0, 0, 0, 0, 0, 0
 	c.bear = false
-	c.evadeNext, c.overwhelmOK, c.cheated, c.totems = false, false, false, nil
+	c.overwhelmOK, c.cheated, c.totems = false, false, nil
 	c.used = map[string]int{}
 }
 
@@ -251,7 +251,7 @@ func (c *Combatant) Effects() []Effect {
 	if c.smoke > 0 {
 		out = append(out, Effect{"Smoke", true})
 	}
-	if c.evadeNext {
+	if c.blinked > 0 {
 		out = append(out, Effect{"Blink", true})
 	}
 	if c.iceBlock > 0 {
@@ -376,9 +376,14 @@ func (b *Battle) Usable(user *Combatant, id string) (bool, string) {
 		return false, "Silenced"
 	case target.smoke > 0 && (delivery(user, a) == Ranged || delivery(user, a) == TargetedSpell):
 		return false, "Can't target through smoke"
+	case target.blinked > 0 && delivery(user, a) == Melee:
+		return false, outOfReach
 	}
 	return true, ""
 }
+
+// outOfReach is why melee can't be chosen against a combatant who used Blink.
+const outOfReach = "Out of reach: blinked away"
 
 // delivery is how an ability reaches its target: in Bear Form, every attack is melee.
 func delivery(user *Combatant, a *Ability) Delivery {
@@ -493,7 +498,8 @@ func (b *Battle) act(user *Combatant, a *Ability) {
 		b.emit("%s.", user.Verb("wait"))
 		return
 	}
-	if ok, _ := b.Usable(user, a.ID); !ok {
+	// A melee attack chosen before the target blinked still swings, and finds nothing.
+	if ok, why := b.Usable(user, a.ID); !ok && why != outOfReach {
 		b.emit("%s can't use %s!", user.Subject(), a.Name)
 		return
 	}
@@ -513,9 +519,8 @@ func (b *Battle) act(user *Combatant, a *Ability) {
 	}
 	// Misses only come from visible mechanics (design/mechanics.md, No random misses).
 	if a.Special != Overwhelm {
-		if target.evadeNext {
-			target.evadeNext = false
-			b.missed(user, "%s the attack!", target.Verb("evade"))
+		if target.blinked > 0 && delivery(user, a) == Melee {
+			b.missed(user, "%s out of reach!", target.Be())
 			return
 		}
 		if target.Flying && delivery(user, a) == Melee && b.rng.Float64() < flyingDodge {
@@ -566,7 +571,7 @@ func (b *Battle) applySelf(user *Combatant, a *Ability) {
 		user.manaShield = a.Duration
 		b.emit("A shield of mana surrounds %s.", user.Object())
 	case Blink:
-		user.evadeNext = true
+		user.blinked = a.Duration
 		b.emit("%s out of reach.", user.Verb("blink"))
 	case Smoke:
 		user.smoke = a.Duration
@@ -762,18 +767,18 @@ func (b *Battle) hit(user, target *Combatant, a *Ability) {
 	case dmg > 0:
 		gainRage(target, rageOnHit)
 	}
-	switch {
-	case crit && eff > 1:
-		b.emitHit(target, cue, "A critical hit! It's super effective!")
-	case crit:
-		b.emitHit(target, cue, "A critical hit!")
-	case eff > 1:
-		b.emitHit(target, cue, "It's super effective!")
-	case eff < 1:
-		b.emitHit(target, cue, "It's not very effective...")
-	default:
-		b.emitHit(target, cue, "%s %d damage.", target.Verb("take"), dmg)
+	// The damage always shows, after any note on a critical hit or the type match.
+	note := ""
+	if crit {
+		note = "A critical hit! "
 	}
+	switch {
+	case eff > 1:
+		note += "It's super effective! "
+	case eff < 1:
+		note += "It's not very effective... "
+	}
+	b.emitHit(target, cue, "%s%s %d damage.", note, target.Verb("take"), dmg)
 	if cheated {
 		b.cheatDeath(target)
 	}
@@ -944,6 +949,9 @@ func (b *Battle) endOfRound() {
 		}
 		if c.smoke > 0 {
 			c.smoke--
+		}
+		if c.blinked > 0 {
+			c.blinked--
 		}
 		if c.iceBlock > 0 && c.Alive() {
 			if c.iceBlock--; c.iceBlock == 0 {

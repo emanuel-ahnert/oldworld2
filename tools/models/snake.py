@@ -1,13 +1,14 @@
-"""Builds a snake: a banded body coiled on the ground, rising into a neck and head, rigged and
-animated. Two variants: the cobra (raised high, with a hood) and the sand snake (lower, sandy,
-no hood).
+"""Builds a snake: a banded body stretched out on the ground in loose S-curves, rising into a
+neck and head, rigged and animated. Two variants: the cobra (raised high, with a hood) and the
+sand snake (lower, sandy, no hood).
 
     blender -b --python tools/models/snake.py -- cobra|sandsnake OUT.gltf [PREVIEW_DIR]
 
 Runs inside Blender without a window; head toward -Y (glTF +Z). The body is one tube that
-bends smoothly: the coil follows the root bone, the neck a chain of four bones. Animations:
-Idle (sways), Walk (slithers), Attack (rears back and strikes), HitReact and Death (the neck
-sinks to the ground).
+bends smoothly: the part on the ground follows a chain of body bones that bend sideways, the
+neck a chain of four bones. Animations: Idle (sways, the tail stirs), Walk (slithers: a wave
+runs down the body from the neck to the tail), Attack (rears back and strikes), HitReact and
+Death (the neck sinks to the ground, the body goes slack).
 """
 
 import math
@@ -31,26 +32,60 @@ if cobra:
     BAND = k.material("Band", (40, 44, 30))
     PALE = k.material("Belly", (205, 185, 120))
     NECK_TOP = Vector((0, -0.24, 0.72))
+    NECK_BASE = Vector((0, 0.02, 0))
+    LENGTH = 1.1  # the body on the ground, from the neck to the tail tip
 else:
     SKIN = k.material("Skin", (205, 170, 112))
     BAND = k.material("Band", (125, 88, 55))
     PALE = k.material("Belly", (232, 212, 165))
     NECK_TOP = Vector((0, -0.32, 0.4))
+    NECK_BASE = Vector((0, 0.05, 0))
+    LENGTH = 0.95
 DARK = k.material("Dark", (25, 22, 20))
 EYE = k.material("Eye", (230, 180, 50))
 TONGUE = k.material("Tongue", (190, 40, 50))
 RADIUS = 0.08
-CENTER = Vector((0, 0.2, 0))  # middle of the coil
+
+# ---- the body on the ground ----
+# The body is a curve on the ground, measured by its length s from the neck (0) to the tail
+# tip (LENGTH), heading back along +Y. heading(s, t) is its sideways angle there: a sine wave
+# that the Walk sends down the body (t is the phase). At t = 0 it is the resting S.
+WAVE = 2 * math.pi / (0.62 * LENGTH)  # about 1.6 waves along the body
+SWING = 0.62  # radians at full amplitude
+
+
+SWEEP = -0.9  # radians: the body also arcs off to the snake's left, so it shows from the front
+
+
+def heading(s, t=0.0, amp=1.0):
+    near = 0.35 + 0.65 * min(1.0, s / (0.25 * LENGTH))  # stays steadier where the neck rises
+    return amp * SWING * near * math.sin(WAVE * s - t) + SWEEP * s / LENGTH
+
+
+def radius(s):
+    u = s / LENGTH
+    return max(0.006, RADIUS * min(1.0, (1 - u) / 0.6) ** 1.1)  # thick, then tapering to a pointed tail
+
+
+STEPS = 90
+ground = [NECK_BASE.copy()]  # points along the rest curve, neck to tail
+for i in range(1, STEPS + 1):
+    s0, s1 = (i - 1) * LENGTH / STEPS, i * LENGTH / STEPS
+    a = heading((s0 + s1) / 2)
+    ground.append(ground[-1] + (s1 - s0) * Vector((-math.sin(a), math.cos(a), 0)))
+
+
+def on_ground(s):
+    f = s / LENGTH * STEPS
+    i = min(int(f), STEPS - 1)
+    return ground[i].lerp(ground[i + 1], f - i)
+
 
 # ---- the body path, tail to head ----
-path = []  # (point, part): part "coil" or a neck parameter 0..1
-turns, steps = 1.5, 90
-for i in range(steps):
-    f = i / (steps - 1)
-    a = math.radians(-90) + (1 - f) * turns * 2 * math.pi  # a spiral from the tail inside to the front (-Y)
-    rho = 0.1 + 0.26 * f
-    r = 0.01 + (RADIUS - 0.01) * f ** 0.7  # thickens all the way to the neck
-    path.append((CENTER + Vector((rho * math.cos(a), rho * math.sin(a), r)), "coil", r))
+path = []  # (point, part, radius): part is a length along the body, or ("neck", 0..1)
+for i in range(STEPS, -1, -1):
+    s = i * LENGTH / STEPS
+    path.append((on_ground(s) + Vector((0, 0, radius(s))), s, radius(s)))
 p0 = path[-1][0]
 p1 = p0 + Vector((-0.02, -0.14, 0.05))
 p3 = NECK_TOP
@@ -60,7 +95,7 @@ for i in range(1, 25):
     t = i / 24
     q = (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3
     neck.append(q)
-    path.append((q, t, RADIUS - 0.015 * t))
+    path.append((q, ("neck", t), RADIUS - 0.015 * t))
 
 # ---- the tube ----
 bm = bmesh.new()
@@ -77,8 +112,11 @@ for i, (p, part, r) in enumerate(path):
         ring.append(bm.verts.new(p + r * (math.cos(a) * normal + math.sin(a) * side)))
     rings.append(ring)
 bm.verts.ensure_lookup_table()
+along = [0.0]
+for i in range(1, len(path)):
+    along.append(along[-1] + (path[i][0] - path[i - 1][0]).length)
 for i in range(len(rings) - 1):
-    band = (i // 5) % 2 == 1  # stripes every 5 rings
+    band = int((along[i] + along[i + 1]) / 2 / 0.075) % 2 == 1  # stripes every 7.5 cm
     for j in range(SIDES):
         f = bm.faces.new((rings[i][j], rings[i][(j + 1) % SIDES], rings[i + 1][(j + 1) % SIDES], rings[i + 1][j]))
         f.material_index = 1 if band else 0
@@ -90,16 +128,30 @@ body = bpy.data.objects.new("Body", mesh)
 bpy.context.scene.collection.objects.link(body)
 mesh.materials.append(SKIN)
 mesh.materials.append(BAND)
+col = mesh.color_attributes.new("Color", "FLOAT_COLOR", "POINT")  # white, like Kit.finish gives every part
+for d in col.data:
+    d.color = (1.0, 1.0, 1.0, 1.0)
 
-# Weights: the coil follows the root, the neck blends along its four bones.
+# Weights: the body blends along its bones, and so does the neck.
 NECK_BONES = ["neck1", "neck2", "neck3", "neck4"]
-groups = {n: body.vertex_groups.new(name=n) for n in ["root"] + NECK_BONES}
+BODY_BONES = [f"body{n + 1}" for n in range(16)]
+SEG = LENGTH / len(BODY_BONES)
+groups = {n: body.vertex_groups.new(name=n) for n in ["root"] + NECK_BONES + BODY_BONES}
 for i, (p, part, r) in enumerate(path):
     idx = [v.index for v in rings[i]]
-    if part == "coil":
-        groups["root"].add(idx, 1.0, "REPLACE")
+    if not isinstance(part, tuple):
+        b = part / SEG
+        for n, name in enumerate(BODY_BONES):
+            w = max(0.0, 1 - abs(b - (n + 0.5)))
+            if n == 0 and b < 0.5:
+                w = 0.5 + b
+                groups["root"].add(idx, 1 - w, "REPLACE")
+            if n == len(BODY_BONES) - 1 and b > len(BODY_BONES) - 0.5:
+                w = 1.0
+            if w > 0:
+                groups[name].add(idx, w, "REPLACE")
         continue
-    b = part * len(NECK_BONES)
+    b = part[1] * len(NECK_BONES)
     for n, name in enumerate(NECK_BONES):
         w = max(0.0, 1 - abs(b - (n + 0.5)))
         if n == 0 and b < 0.5:
@@ -132,7 +184,10 @@ if cobra:
 
 # ---- rig ----
 cuts = [p0] + [neck[int(len(neck) * (n + 1) / 4) - 1] for n in range(4)]
-k.bones([("root", CENTER, None)] +
+# The body bones lie flat, so bending them about their Z axis swings the body sideways.
+joints = [on_ground(n * SEG) + Vector((0, 0, 0.04)) for n in range(len(BODY_BONES) + 1)]
+k.bones([("root", NECK_BASE, None)] +
+        [(name, joints[n], "root" if n == 0 else BODY_BONES[n - 1], joints[n + 1]) for n, name in enumerate(BODY_BONES)] +
         [(name, cuts[n], "root" if n == 0 else NECK_BONES[n - 1], cuts[n + 1]) for n, name in enumerate(NECK_BONES)] +
         [("head", NECK_TOP, "neck4", NECK_TOP + fwd * 0.2)])
 k.bind("Cobra" if cobra else "SandSnake")
@@ -156,15 +211,31 @@ def neck(frame, bends, sway=0.0, head=0.0):
     key(frame, "head", rot=(head - lift, 0, 0))
 
 
+def body(frame, t=0.0, amp=1.0, ripple=0.0):
+    """Poses the body as heading(s, t, amp), plus a small ripple running down the body. Each
+    bone turns by how much more its heading changes than at rest, since it carries the turns
+    of all the bones before it."""
+    before = 0.0
+    for n, name in enumerate(BODY_BONES):
+        mid = (n + 0.5) * SEG
+        change = heading(mid, t, amp) - heading(mid) + ripple * math.sin(WAVE * mid - t) * mid / LENGTH
+        key(frame, name, rot=(0, 0, math.degrees(change - before)))
+        before = change
+
+
 def idle():
     for f, s in ((1, 0), (16, 5), (31, 0), (46, -5), (61, 0)):
         neck(f, (0, 0, 0, 0), s)
+    for f in range(1, 62, 6):  # the tail stirs
+        body(f, 0, 1, 0.12 * math.sin(2 * math.pi * (f - 1) / 60))
 
 
 def walk():
-    for f, s in ((1, 0), (7, 9), (13, 0), (19, -9), (25, 0)):
-        key(f, "root", rot=(0, s * 0.8, 0))
-        neck(f, (0, 0, 0, 0), -s)
+    # One full wave runs down the body per loop; the head stays steady, swaying a little.
+    for f in range(1, 26, 2):
+        body(f, 2 * math.pi * (f - 1) / 24)
+    for f, s in ((1, 0), (7, 5), (13, 0), (19, -5), (25, 0)):
+        neck(f, (0, 0, 0, 0), s)
 
 
 def attack():
@@ -183,6 +254,7 @@ def death():
     neck(24, (20, 18, 12, 0), 10, -5)
     neck(36, (21, 19, 13, 0), 10, -8)  # the head lies flat
     key(36, "root", rot=(0, 10, 0))
+    body(36, 0.6, 0.55)  # the body goes slack
 
 
 k.action("Idle", 61, idle)

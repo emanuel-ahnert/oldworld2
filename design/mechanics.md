@@ -156,7 +156,8 @@ Pokemon style: damage and healing over time are a **fraction of the target's max
 | Dread | Each turn, 50% chance to lose it (Dread) | No |
 | Silence | Can't use spells (targeted and area spells that aren't physical) | No |
 | Shield | Absorbs damage up to 25% of max HP (Ward of Light), then breaks | — |
-| Evade | The next attack against the character misses (Blink, Feign Death, Evade) | — |
+| Evade | The next attack against the character misses (Feign Death, Evade) | — |
+| Blink | Melee attacks can't reach the character this round and the next: a melee attack already chosen misses, and melee can't be chosen against it next round. Ranged attacks and spells still hit | — |
 | Immune | Takes no damage (Divine Shield) | — |
 | Smoke | Ranged attacks and targeted spells can't target the character (see [Melee vs. Ranged](#8-melee-vs-ranged)) | — |
 

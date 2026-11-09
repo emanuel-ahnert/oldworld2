@@ -440,7 +440,10 @@ func (s *battleScene) drawBox(dst *gfx.Image, vw, vh, boxH int) {
 	case s.phase == phaseResult && len(s.result) > 0:
 		s.g.font.Draw(dst, s.result[0], tx, ty, ink)
 	case s.phase == phasePlay && len(s.messages) > 0:
-		s.g.font.Draw(dst, s.messages[0].Text, tx, ty, ink)
+		// Wrapped: a critical, super effective hit names both before the damage.
+		for i, l := range s.g.font.Wrap(s.messages[0].Text, w-16) {
+			s.g.font.Draw(dst, l, tx, ty+i*LineHeight, ink)
+		}
 	case s.phase == phaseChoose:
 		s.drawMenu(dst, x, y, w, boxH)
 	}

@@ -65,7 +65,7 @@ Their MP stat is unused; the table below gives their costs in rage or energy.
 | Mage | Mana Shield | 3 | — | 30 | 5 rounds, priority +2 |
 | Mage | Ignite | 4 | — | 20 | Fire, targeted spell: Ignite, 1/16 max HP per round for 8 rounds |
 | Mage | Tidal Splash | 5 | 50 | 25 | Water, targeted spell |
-| Mage | Blink | 6 | — | 20 | Priority +2; evade the next attack |
+| Mage | Blink | 6 | — | 20 | Priority +2; melee attacks can't reach the Mage this round and the next (ranged attacks and spells still can) |
 | Mage | Arcane Explosion | 7 | 60 | 30 | Arcane, area spell: neutral to every type (no affinity bonus), gets through Smoke; the answer to enemies that resist all of Ice, Water and Fire, like the Corsair |
 | Mage | Frostfire Bolt | 8 | 55 | 25 | Ice or Fire, whichever is more effective against the target (with the mage's affinity bonus either way); Speed −1 stage. Replaces Ice Bolt in the bot's loadout |
 | Mage | Ice Block | 10 | — | 25 | Priority +1; the mage is immune to attacks this round and the next, and can only wait. Its menu slot turns into **Cancel**, which breaks the ice without using the turn (the mage then chooses the round's move) |
@@ -178,7 +178,7 @@ Level-up abilities come automatically, trainer abilities cost money, tome abilit
 ### Mage
 | Source | Abilities |
 |--------|-----------|
-| Level-up | **Frost Ring** at level 2 (Ice, area spell, Freeze chance; early so Smoke can't shut the Mage down), **Mana Shield** at level 3 (priority +2: 50% of damage taken is taken from MP instead of HP), **Ignite** at level 4 (Fire damage over time), **Tidal Splash** at level 5 (Water, targeted spell), **Blink** at level 6 (priority +2: evade the opponent's next attack), **Arcane Explosion** at level 7 (Arcane area spell, neutral to every type), **Frostfire Bolt** at level 8 (Ice or Fire, whichever hurts more), **Ice Block** at level 10 (immune to attacks for 2 rounds) |
+| Level-up | **Frost Ring** at level 2 (Ice, area spell, Freeze chance; early so Smoke can't shut the Mage down), **Mana Shield** at level 3 (priority +2: 50% of damage taken is taken from MP instead of HP), **Ignite** at level 4 (Fire damage over time), **Tidal Splash** at level 5 (Water, targeted spell), **Blink** at level 6 (priority +2: melee attacks can't reach the Mage this round and the next), **Arcane Explosion** at level 7 (Arcane area spell, neutral to every type), **Frostfire Bolt** at level 8 (Ice or Fire, whichever hurts more), **Ice Block** at level 10 (immune to attacks for 2 rounds) |
 | Trainer | **Time Warp** (+1 Speed stage at the start of each of the next 3 rounds; using Blink during that time still gains the stack, so Time Warp → Blink is a free Speed stage), Flame Burst (Fire, high power), Hailstorm (Ice, area spell, multi-hit), Mutate (turns the enemy into a harmless critter for 2 turns) |
 | Tome | Meteor (Fire, very high power, charges for 1 turn) |
 

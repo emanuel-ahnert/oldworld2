@@ -3,6 +3,7 @@ package procgen
 import (
 	"testing"
 
+	"oldworld2/internal/creature"
 	"oldworld2/internal/tiles"
 )
 
@@ -186,6 +187,31 @@ func TestShrinesAreReachable(t *testing.T) {
 		}
 		if shrines == 0 {
 			t.Fatalf("seed %d: the start zone has no shrines", seed)
+		}
+	}
+}
+
+// Elites keep 100 tiles away from settlements, where games start, so a new character meets
+// trash first. The rule is for the group's spot; its members stand up to 4 tiles around it.
+func TestNoElitesNearSettlements(t *testing.T) {
+	for seed := int64(1); seed <= 3; seed++ {
+		cache := NewTerrainCache(seed)
+		trash := 0
+		for cy := -24; cy < 24; cy++ {
+			for cx := -24; cx < 24; cx++ {
+				for _, s := range cache.Generate(cx, cy).Spawns {
+					l := LayoutAt(seed, s.X, s.Y)
+					if d := l.hubDist(s.X, s.Y); d < eliteHubSafe-6 {
+						if creature.Get(s.Kind).Tier == "elite" {
+							t.Fatalf("seed %d: elite %v %.0f tiles from a settlement", seed, s.Kind, d)
+						}
+						trash++
+					}
+				}
+			}
+		}
+		if trash == 0 {
+			t.Fatalf("seed %d: no enemies near the settlements at all", seed)
 		}
 	}
 }
