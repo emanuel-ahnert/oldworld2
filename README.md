@@ -1,6 +1,7 @@
 # Oldworld2
 
 Author: Emanuel Ahnert and Claude Opus 5.5
+
 Current state: working prototype, development stopped. The combat system doesn't fit the rest of the game, so I will redesign this and continue with Oldworld 3.
 
 This game explores what happens if you combine WoW classes with Diablo random map and item generation, using a Pokemon style combat system. A top-down RPG with a realtime map and turn-based fights.
