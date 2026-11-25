@@ -1,9 +1,12 @@
 # Oldworld2
+A vibecoded RPG game prototype used to test some game mechanics.
 
 Author: Emanuel Ahnert and Claude Opus 5.5
 
-Current state: working prototype, development stopped. The combat system doesn't fit the rest of the game, so I will redesign this and continue with Oldworld 3.
+## Current state
+Working prototype, development stopped. The combat system doesn't fit the rest of the game very well, so I will redesign this and continue with its successor Oldworld 3.
 
+## Description
 This game explores what happens if you combine WoW classes with Diablo random map and item generation, using a Pokemon style combat system. A top-down RPG with a realtime map and turn-based fights.
 
 You explore an endless, procedurally generated overworld
